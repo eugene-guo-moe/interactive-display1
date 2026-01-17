@@ -2,83 +2,197 @@
 
 import { useRouter } from 'next/navigation'
 import { useQuiz } from '@/context/QuizContext'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function WelcomePage() {
   const router = useRouter()
   const { resetQuiz } = useQuiz()
+  const [phase, setPhase] = useState(0)
 
   // Reset quiz state when landing on welcome page
   useEffect(() => {
     resetQuiz()
   }, [resetQuiz])
 
+  // Auto-cycle through phases
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhase(p => (p + 1) % 3)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
+
   const handleStart = () => {
     router.push('/question/1')
   }
 
+  const phases = [
+    {
+      word: 'Remember',
+      sub: 'our past',
+      color: '#D4A574',
+      // Chinatown Singapore - vibrant old buildings by Kush Dwivedi - FREE
+      image: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80',
+      overlay: 'rgba(26, 16, 8, 0.6)'
+    },
+    {
+      word: 'Celebrate',
+      sub: 'our present',
+      color: '#7DD3C0',
+      // Marina Bay Sands aerial sunset - FREE by Hu Chen
+      image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
+      overlay: 'rgba(8, 26, 26, 0.5)'
+    },
+    {
+      word: 'Dream',
+      sub: 'our future',
+      color: '#93C5FD',
+      // TRON-style light trails - FREE by kevin laminto
+      image: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
+      overlay: 'rgba(10, 15, 30, 0.45)'
+    }
+  ]
+
+  const current = phases[phase]
+
   return (
-    <div className="relative flex-1 flex flex-col items-center justify-center p-4 md:p-8 page-transition overflow-x-hidden">
-      {/* Decorative gradient line at top - gold */}
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+    <div
+      className="flex-1 flex items-center justify-center overflow-hidden relative"
+      style={{ backgroundColor: '#050505' }}
+    >
+      {/* Background images with crossfade */}
+      {phases.map((p, i) => (
+        <div
+          key={i}
+          className="absolute inset-0 transition-opacity duration-[1500ms] ease-in-out"
+          style={{
+            opacity: i === phase ? 1 : 0
+          }}
+        >
+          {/* Image with continuous Ken Burns effect */}
+          <div
+            className="absolute inset-0 bg-cover bg-center ken-burns-animate"
+            style={{
+              backgroundImage: `url(${p.image})`
+            }}
+          />
+          {/* Dark overlay */}
+          <div
+            className="absolute inset-0 transition-colors duration-[1500ms]"
+            style={{ backgroundColor: p.overlay }}
+          />
+        </div>
+      ))}
+
+      {/* Radial glow on top */}
+      <div
+        className="absolute inset-0 z-10 transition-all duration-1000 pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at 50% 50%, ${current.color}20 0%, transparent 60%)`
+        }}
+      />
+
+      {/* Vignette effect */}
+      <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle at 50% 50%, transparent 30%, rgba(0,0,0,0.4) 100%)'
+        }}
+      />
 
       {/* Main content */}
-      <div className="relative z-10 text-center w-full max-w-2xl mx-auto px-2">
-        {/* Elegant badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/20 bg-gold/5 mb-8 md:mb-10">
-          <div className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-          <span className="text-gold/80 text-xs md:text-sm font-medium tracking-widest uppercase">SG60 Experience</span>
-        </div>
-
-        {/* Title with elegant glow */}
-        <h1 className="font-display text-4xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
-          <span className="gradient-text-past text-glow">History</span>
-          <span className="text-white/40 mx-2 md:mx-3 font-light italic">vs</span>
-          <span className="gradient-text-future text-glow">Future</span>
-        </h1>
-
-        {/* Subtitle with elegant styling */}
-        <div className="glass-card-light rounded-xl px-6 md:px-10 py-3 md:py-4 mb-8 md:mb-10 inline-block">
-          <p className="text-lg md:text-2xl font-display font-medium text-white/80 tracking-wide">
-            A Singapore Story
-          </p>
-        </div>
-
-        {/* Description */}
-        <p className="text-white/50 mb-10 md:mb-14 text-base md:text-lg leading-relaxed max-w-md mx-auto px-2">
-          Journey through time — from kampung days to smart nation.
-          <br className="hidden md:block" />
-          <span className="text-white/70">Create your own Singapore moment.</span>
-        </p>
-
-        {/* CTA Button - Elegant gold */}
-        <button
-          onClick={handleStart}
-          className="btn-glow btn-pulse bg-gold hover:bg-gold-light text-black font-bold text-lg md:text-xl px-10 md:px-16 py-4 md:py-5 rounded-xl shadow-2xl shadow-gold/20 hover:shadow-gold/40 transition-all duration-400 hover:scale-[1.02]"
+      <div className="relative z-20 text-center px-6">
+        <p
+          key={`word-${phase}`}
+          className="font-display text-6xl sm:text-7xl md:text-[10rem] lg:text-[12rem] font-bold leading-none animate-breathe drop-shadow-2xl"
+          style={{
+            color: current.color,
+            textShadow: `0 0 80px ${current.color}40`
+          }}
         >
-          Begin Experience
-        </button>
-
-        {/* Footer info */}
-        <div className="mt-10 md:mt-12 flex items-center justify-center gap-4 md:gap-8 text-white/30 text-xs md:text-sm">
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-gold/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            2 min
-          </span>
-          <span className="w-px h-3 bg-white/20" />
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-gold/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-            </svg>
-            AI Generated
-          </span>
-        </div>
+          {current.word}
+        </p>
+        <p
+          key={`sub-${phase}`}
+          className="text-xl sm:text-2xl md:text-4xl text-white/60 mt-4 animate-fade-up"
+        >
+          {current.sub}
+        </p>
       </div>
 
-      {/* Decorative gradient line at bottom - gold */}
-      <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
+      {/* Progress dots */}
+      <div className="absolute bottom-32 sm:bottom-36 left-1/2 -translate-x-1/2 flex gap-4 z-20">
+        {phases.map((p, i) => (
+          <button
+            key={i}
+            onClick={() => setPhase(i)}
+            className="w-3 h-3 rounded-full transition-all duration-500 backdrop-blur-sm"
+            style={{
+              backgroundColor: i === phase ? p.color : 'rgba(255,255,255,0.3)',
+              transform: i === phase ? 'scale(1.5)' : 'scale(1)',
+              boxShadow: i === phase ? `0 0 20px ${p.color}60` : 'none'
+            }}
+          />
+        ))}
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={handleStart}
+        className="absolute bottom-10 sm:bottom-12 left-1/2 -translate-x-1/2 px-10 py-4 bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold text-lg rounded-full shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all z-20"
+      >
+        Begin Your Journey
+      </button>
+
+      {/* School indicator */}
+      <p className="absolute top-6 sm:top-8 left-1/2 -translate-x-1/2 text-white/40 text-xs sm:text-sm tracking-widest z-20 text-center px-4">
+        RIVERSIDE SECONDARY SCHOOL, SINGAPORE
+      </p>
+
+      {/* Time and AI badge */}
+      <div className="absolute top-6 sm:top-8 right-6 sm:right-8 flex items-center gap-3 text-white/30 text-xs z-20">
+        <span className="flex items-center gap-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          2 min
+        </span>
+        <span className="w-px h-3 bg-white/20" />
+        <span className="flex items-center gap-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+          </svg>
+          AI
+        </span>
+      </div>
+
+      {/* Preload images */}
+      {phases.map((p, i) => (
+        <link key={`preload-${i}`} rel="preload" as="image" href={p.image} />
+      ))}
+
+      <style jsx>{`
+        @keyframes breathe {
+          0% { opacity: 0; transform: scale(0.95); }
+          20% { opacity: 1; transform: scale(1); }
+          80% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.02); }
+        }
+        @keyframes fadeUp {
+          0% { opacity: 0; transform: translateY(10px); }
+          20% { opacity: 1; transform: translateY(0); }
+          80% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-5px); }
+        }
+        @keyframes kenBurnsContinuous {
+          0% { transform: scale(1.0); }
+          50% { transform: scale(1.15); }
+          100% { transform: scale(1.0); }
+        }
+        .animate-breathe { animation: breathe 4s ease-in-out; }
+        .animate-fade-up { animation: fadeUp 4s ease-in-out; }
+        .ken-burns-animate { animation: kenBurnsContinuous 20s ease-in-out infinite; }
+      `}</style>
     </div>
   )
 }
