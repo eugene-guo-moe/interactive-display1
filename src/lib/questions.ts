@@ -2,6 +2,7 @@ export interface Question {
   id: number
   question: string
   icon: string
+  backgroundImage: string
   options: { label: string; text: string; emoji: string }[]
   answerKey: 'q1' | 'q2' | 'q3'
 }
@@ -11,6 +12,7 @@ export const questions: Question[] = [
     id: 1,
     question: 'What aspect of Singapore resonates with you most?',
     icon: '🇸🇬',
+    backgroundImage: 'https://images.unsplash.com/photo-1536163713675-42cf53cbd4f5?w=1920&q=80',
     options: [
       { label: 'A', text: 'Kampung spirit and community bonds of the past', emoji: '🏘️' },
       { label: 'B', text: "The multicultural melting pot we've become", emoji: '🎭' },
@@ -23,6 +25,7 @@ export const questions: Question[] = [
     id: 2,
     question: 'Which Singapore icon speaks to you?',
     icon: '🏛️',
+    backgroundImage: 'https://images.unsplash.com/photo-1506351421178-63b52a2d2562?w=1920&q=80',
     options: [
       { label: 'A', text: 'The old National Library on Stamford Road', emoji: '📚' },
       { label: 'B', text: 'The Merlion', emoji: '🦁' },
@@ -35,9 +38,11 @@ export const questions: Question[] = [
     id: 3,
     question: 'Where does your heart lean?',
     icon: '💫',
+    backgroundImage: 'https://images.unsplash.com/photo-1637062285049-7999f31f62ae?w=1920&q=80',
     options: [
       { label: 'A', text: 'Looking back — learning wisdom from our journey', emoji: '🏛️' },
-      { label: 'B', text: 'Looking forward — embracing tomorrow with excitement', emoji: '🚀' },
+      { label: 'B', text: 'Right here — celebrating the Singapore of today', emoji: '🇸🇬' },
+      { label: 'C', text: 'Looking forward — embracing tomorrow with excitement', emoji: '🚀' },
     ],
     answerKey: 'q3',
   },
