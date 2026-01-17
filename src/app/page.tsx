@@ -60,25 +60,25 @@ export default function WelcomePage() {
       className="flex-1 flex items-center justify-center overflow-hidden relative"
       style={{ backgroundColor: '#050505' }}
     >
-      {/* Background images with crossfade */}
+      {/* Background images with smooth crossfade only - no zoom */}
       {phases.map((p, i) => (
         <div
           key={i}
-          className="absolute inset-0 transition-opacity duration-[1500ms] ease-in-out"
+          className="absolute inset-0 transition-opacity duration-[2000ms] ease-in-out"
           style={{
             opacity: i === phase ? 1 : 0
           }}
         >
-          {/* Image with continuous Ken Burns effect */}
+          {/* Image - static, slightly zoomed to cover edges */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-animate"
+            className="absolute inset-[-5%] bg-cover bg-center"
             style={{
               backgroundImage: `url(${p.image})`
             }}
           />
           {/* Dark overlay */}
           <div
-            className="absolute inset-0 transition-colors duration-[1500ms]"
+            className="absolute inset-0"
             style={{ backgroundColor: p.overlay }}
           />
         </div>
@@ -184,14 +184,8 @@ export default function WelcomePage() {
           80% { opacity: 1; transform: translateY(0); }
           100% { opacity: 0; transform: translateY(-5px); }
         }
-        @keyframes kenBurnsContinuous {
-          0% { transform: scale(1.0); }
-          50% { transform: scale(1.15); }
-          100% { transform: scale(1.0); }
-        }
         .animate-breathe { animation: breathe 4s ease-in-out; }
         .animate-fade-up { animation: fadeUp 4s ease-in-out; }
-        .ken-burns-animate { animation: kenBurnsContinuous 20s ease-in-out infinite; }
       `}</style>
     </div>
   )
