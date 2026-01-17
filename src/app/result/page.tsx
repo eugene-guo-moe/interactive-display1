@@ -67,15 +67,28 @@ export default function ResultPage() {
 
   return (
     <div className="relative flex-1 flex flex-col page-transition overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', backgroundColor: '#050505' }}>
-      {/* Background image - extends beyond edges */}
-      <div
-        className="fixed inset-[-5%] bg-cover bg-center pointer-events-none"
-        style={{ backgroundImage: `url(${currentPhase.image})` }}
-      />
-      {/* Phase-specific overlay */}
+      {/* Background - generated image, heavily blurred */}
+      {displayImageUrl && (
+        <div
+          className="fixed inset-[-10%] bg-cover bg-center pointer-events-none"
+          style={{
+            backgroundImage: `url(${displayImageUrl})`,
+            filter: 'blur(40px)',
+            transform: 'scale(1.1)',
+          }}
+        />
+      )}
+      {/* Fallback to phase image if no generated image */}
+      {!displayImageUrl && (
+        <div
+          className="fixed inset-[-5%] bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: `url(${currentPhase.image})` }}
+        />
+      )}
+      {/* Dark overlay */}
       <div
         className="fixed inset-0 pointer-events-none"
-        style={{ backgroundColor: currentPhase.overlay }}
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       />
       {/* Radial glow */}
       <div
@@ -137,8 +150,8 @@ export default function ResultPage() {
       </div>
 
       {/* Generated image */}
-      <div className="relative z-10 flex items-center justify-center px-4 py-2 shrink-0">
-        <div className="relative max-w-xs md:max-w-sm w-full">
+      <div className="relative z-10 flex items-center justify-center px-3 py-2 shrink-0">
+        <div className="relative w-[85vw] max-w-sm md:max-w-md">
           {/* Decorative frame corners */}
           <div
             className="absolute -top-2 -left-2 w-8 h-8 border-l-2 border-t-2 rounded-tl-lg"
@@ -171,7 +184,7 @@ export default function ResultPage() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[40vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-auto max-h-[55vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}

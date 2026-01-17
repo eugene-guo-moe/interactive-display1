@@ -16,6 +16,9 @@ const funFactsPast = [
   'The iconic Merlion statue was first unveiled in 1972 at the mouth of the Singapore River.',
   'Kampong Glam was once home to the Malay royalty and is now a vibrant heritage district.',
   'The old National Library on Stamford Road opened in 1960 and became a beloved landmark.',
+  'Singapore\'s first cinema, the Alhambra, opened in 1907 along Beach Road.',
+  'The Singapore River was once so polluted that no fish could survive in it until a major cleanup in the 1980s.',
+  'Haw Par Villa, built in 1937, features over 1,000 statues depicting Chinese folklore.',
 ]
 
 const funFactsPresent = [
@@ -23,6 +26,9 @@ const funFactsPresent = [
   'Changi Airport has been voted the world\'s best airport for 12 consecutive years.',
   'Singapore has over 80 hawker centres serving affordable local food.',
   'The Singapore Botanic Gardens is a UNESCO World Heritage Site since 2015.',
+  'Gardens by the Bay spans 101 hectares and features the world\'s tallest indoor waterfall.',
+  'Singapore has one of the lowest crime rates in the world.',
+  'The MRT system carries over 3 million passengers daily across 6 lines.',
 ]
 
 const funFactsFuture = [
@@ -30,9 +36,12 @@ const funFactsFuture = [
   'The city plans to have 80% of buildings be green-certified by 2030.',
   'Autonomous vehicles are being tested on Singapore roads for future transport.',
   'Singapore is developing floating solar farms to boost renewable energy.',
+  'The Tuas Mega Port will be the world\'s largest fully automated terminal when completed.',
+  'Singapore plans to phase out petrol and diesel vehicles by 2040.',
+  'Underground spaces are being developed to free up land for parks and housing.',
 ]
 
-const stepDurations = [5000, 15000, 12000, 8000]
+const stepDurations = [12000, 35000, 30000, 13000] // Total: 90 seconds
 
 const backgroundImages = {
   past: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80', // Chinatown Singapore
@@ -72,8 +81,8 @@ export default function LoadingPage() {
     if (hasStarted.current) return
     hasStarted.current = true
 
-    // Start slow progress animation (runs for 40 seconds to ~90%)
-    const totalDuration = 40000 // 40 seconds
+    // Start slow progress animation (runs for 85 seconds to ~90%)
+    const totalDuration = 85000 // 85 seconds
     const maxProgress = 90 // Only go to 90% until done
     const startTime = Date.now()
 

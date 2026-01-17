@@ -179,7 +179,7 @@ async function generateSceneWithPerson(
     },
     body: JSON.stringify({
       prompt: `${prompt} with ${personTerm.toLowerCase()} in the foreground looking directly at the viewer, front-facing portrait from waist up, face clearly visible, making eye contact with camera, seamlessly blended into the environment, consistent lighting, neutral pleasant expression, flattering portrait lighting, photorealistic, family-friendly, appropriate for all ages.`,
-      image_size: 'portrait_4_3',
+      image_size: 'portrait_16_9', // 9:16 ratio to fill phone screens
       num_images: 1,
       safety_tolerance: 1, // Strictest safety setting
     }),
