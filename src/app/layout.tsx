@@ -3,13 +3,19 @@ import './globals.css'
 import { QuizProvider } from '@/context/QuizContext'
 
 export const metadata: Metadata = {
-  title: 'History vs Future - Singapore Interactive Experience',
-  description: 'An interactive booth experience exploring Singapore\'s past and future',
+  title: 'Past, Present, Future - Riverside Secondary\'s Interactive Experience',
+  description: 'An interactive booth experience exploring Singapore\'s past, present and future',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/icon-192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SG History vs Future',
+    title: 'Past, Present, Future',
   },
 }
 

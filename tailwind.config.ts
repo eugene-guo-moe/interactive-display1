@@ -13,56 +13,32 @@ const config: Config = {
         'sans': ['Satoshi', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // Premium Luxury theme
-        primary: '#D4AF37',      // Luxury gold
-        secondary: '#F7E7CE',    // Champagne
-        accent: '#C0C0C0',       // Silver
+        // Singapore Night theme
+        primary: '#06B6D4',      // Cyan - Marina Bay lights
+        secondary: '#F472B6',    // Pink - city neon
+        accent: '#A855F7',       // Purple glow
 
         // Past/Future accents
-        past: '#B8860B',         // Dark gold
-        future: '#E5E4E2',       // Platinum
+        past: '#F59E0B',         // Warm amber
+        future: '#06B6D4',       // Cool cyan
 
-        // Luxury gold shades
-        gold: {
-          DEFAULT: '#D4AF37',
-          light: '#F7E7CE',
-          dark: '#B8860B',
-        },
-
-        // Luxury silver/platinum shades
-        silver: {
-          DEFAULT: '#C0C0C0',
-          light: '#E5E4E2',
-          dark: '#A8A8A8',
-        },
-
-        // Backgrounds - Deep blacks
-        'sg-dark': '#0A0A0A',    // Pure dark
-        'sg-surface': '#141414', // Dark surface
-        'sg-border': '#2A2A2A',  // Subtle border
+        // Backgrounds
+        'sg-dark': '#0C0A1D',    // Deep purple-black
+        'sg-surface': '#1A1730', // Muted purple surface
+        'sg-border': '#2D2A4A',  // Border color
 
         // Text
         'sg-text': '#FFFFFF',
-        'sg-text-muted': '#8A8A8A',
+        'sg-text-muted': '#9CA3AF',
       },
       animation: {
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'float': 'float 4s ease-in-out infinite',
-        'luxury-reveal': 'luxuryReveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
-        'gold-shimmer': 'goldShimmer 3s ease-in-out infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 3s ease-in-out infinite',
       },
       keyframes: {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-8px)' },
-        },
-        luxuryReveal: {
-          from: { opacity: '0', transform: 'translateY(20px) scale(0.98)' },
-          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
-        },
-        goldShimmer: {
-          '0%, 100%': { opacity: '0.8' },
-          '50%': { opacity: '1' },
+          '50%': { transform: 'translateY(-10px)' },
         }
       }
     },

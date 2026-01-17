@@ -132,9 +132,9 @@ export default function CameraPage() {
   if (error) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 page-transition">
-        <div className="glass-card rounded-3xl p-10 text-center max-w-md">
-          <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-3xl p-10 text-center max-w-md">
+          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
             </svg>
@@ -144,13 +144,13 @@ export default function CameraPage() {
           <div className="flex gap-3">
             <button
               onClick={handleBack}
-              className="btn-press flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 font-semibold hover:bg-white/10"
+              className="btn-press flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-medium hover:bg-white/10 hover:text-white hover:border-white/30 transition-all"
             >
               Go Back
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="btn-press flex-1 py-3 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-semibold"
+              className="btn-press flex-1 py-3 rounded-xl bg-white/90 text-[#1e3a5f] font-semibold hover:bg-white transition-all"
             >
               Try Again
             </button>
@@ -177,21 +177,21 @@ export default function CameraPage() {
       {/* Camera view */}
       <div className="flex-1 relative overflow-hidden">
         {capturedPhoto ? (
-          // Show captured photo with elegant gold frame
+          // Show captured photo
           <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-gold/20 ring-1 ring-gold/30">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={capturedPhoto}
                 alt="Captured photo"
                 className="max-h-[60vh] w-auto"
               />
-              {/* Success badge - gold */}
-              <div className="absolute top-4 right-4 bg-gold/90 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              {/* Success badge */}
+              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-[#1e3a5f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-black text-sm font-medium">Captured</span>
+                <span className="text-[#1e3a5f] text-sm font-medium">Captured</span>
               </div>
             </div>
           </div>
@@ -206,15 +206,15 @@ export default function CameraPage() {
               className="w-full h-full object-cover camera-video"
             />
 
-            {/* Loading overlay - gold */}
+            {/* Loading overlay */}
             {!isCameraReady && (
-              <div className="absolute inset-0 flex items-center justify-center bg-sg-dark">
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
                 <div className="text-center">
                   <div className="relative w-16 h-16 mx-auto mb-4">
-                    <div className="absolute inset-0 rounded-full border-2 border-white/5" />
-                    <div className="absolute inset-0 rounded-full border-2 border-gold border-t-transparent animate-spin" />
-                    <div className="absolute inset-2 rounded-full bg-gold/10 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+                    <div className="absolute inset-0 rounded-full border-2 border-white/80 border-t-transparent animate-spin" />
+                    <div className="absolute inset-2 rounded-full bg-white/5 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
                       </svg>
@@ -230,35 +230,29 @@ export default function CameraPage() {
               <div className="absolute inset-0 bg-white animate-pulse z-30" />
             )}
 
-            {/* Frame guide with elegant gold corner brackets */}
+            {/* Frame guide with corner brackets */}
             {isCameraReady && countdown === null && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="relative w-64 h-80 md:w-72 md:h-96">
-                  {/* Corner brackets - gold */}
-                  {/* Top left */}
-                  <div className="absolute top-0 left-0 w-12 h-12 border-l-2 border-t-2 border-gold/80 rounded-tl-xl" />
-                  {/* Top right */}
-                  <div className="absolute top-0 right-0 w-12 h-12 border-r-2 border-t-2 border-gold/80 rounded-tr-xl" />
-                  {/* Bottom left */}
-                  <div className="absolute bottom-0 left-0 w-12 h-12 border-l-2 border-b-2 border-gold/80 rounded-bl-xl" />
-                  {/* Bottom right */}
-                  <div className="absolute bottom-0 right-0 w-12 h-12 border-r-2 border-b-2 border-gold/80 rounded-br-xl" />
+                {/* Corner accents */}
+                <div className="absolute top-8 left-8 w-8 h-8 border-l border-t border-white/40" />
+                <div className="absolute top-8 right-8 w-8 h-8 border-r border-t border-white/40" />
+                <div className="absolute bottom-8 left-8 w-8 h-8 border-l border-b border-white/40" />
+                <div className="absolute bottom-8 right-8 w-8 h-8 border-r border-b border-white/40" />
 
-                  {/* Scanning line animation - gold */}
-                  <div className="absolute inset-x-4 h-0.5 bg-gradient-to-r from-transparent via-gold/60 to-transparent opacity-60 animate-scan" />
-                </div>
+                {/* Center focus ring */}
+                <div className="w-20 h-20 rounded-full border border-white/20" />
               </div>
             )}
 
-            {/* Countdown overlay - elegant gold */}
+            {/* Countdown overlay */}
             {countdown !== null && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
                 <div className="relative">
                   {/* Outer ring */}
-                  <div className="absolute inset-0 w-32 h-32 rounded-full border-2 border-gold/30 animate-ping" />
+                  <div className="absolute inset-0 w-32 h-32 rounded-full border-2 border-white/30 animate-ping" />
                   {/* Number */}
-                  <div className="w-32 h-32 rounded-full bg-gold flex items-center justify-center shadow-2xl shadow-gold/40">
-                    <span className="font-display text-7xl font-bold text-black">{countdown}</span>
+                  <div className="w-32 h-32 rounded-full backdrop-blur-md bg-white/20 border border-white/30 flex items-center justify-center shadow-2xl">
+                    <span className="font-display text-7xl font-bold text-white">{countdown}</span>
                   </div>
                 </div>
               </div>
@@ -270,52 +264,48 @@ export default function CameraPage() {
       {/* Hidden canvas for capture */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Controls - luxury dark glass */}
-      <div className="shrink-0 p-5 glass-card rounded-t-3xl border-t border-gold/10">
+      {/* Controls */}
+      <div className="shrink-0 p-6 bg-black">
         {capturedPhoto ? (
           // Photo review controls
-          <div className="flex gap-3 max-w-md mx-auto">
+          <div className="flex justify-center items-center gap-6">
             <button
               onClick={handleRetake}
-              className="btn-press flex-1 py-4 rounded-xl bg-white/5 border border-white/10 text-white/60 font-medium text-lg hover:bg-white/10 hover:text-white hover:border-gold/30 transition-all flex items-center justify-center gap-2"
+              className="btn-press w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-all"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Retake
             </button>
             <button
               onClick={handleUsePhoto}
-              className="btn-glow btn-press flex-1 py-4 rounded-xl bg-gold text-black font-semibold text-lg flex items-center justify-center gap-2 hover:bg-gold-light transition-all"
+              className="btn-press w-20 h-20 rounded-full bg-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
             >
-              Use Photo
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              <svg className="w-8 h-8 text-[#1e3a5f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </button>
+            <div className="w-12" />
           </div>
         ) : (
           // Capture controls
-          <div className="max-w-md mx-auto">
-            <div className="flex gap-3">
-              <button
-                onClick={handleBack}
-                className="btn-press flex-1 py-4 rounded-xl bg-white/5 border border-white/10 text-white/60 font-medium text-lg hover:bg-white/10 hover:text-white hover:border-gold/30 transition-all"
-              >
-                Back
-              </button>
-              <button
-                onClick={startCountdown}
-                disabled={!isCameraReady || countdown !== null}
-                className="btn-glow btn-press flex-[2] py-4 rounded-xl bg-gold text-black font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-gold-light transition-all"
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                </svg>
-                Take Photo
-              </button>
-            </div>
+          <div className="flex justify-center items-center gap-6">
+            <button
+              onClick={handleBack}
+              className="btn-press w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={startCountdown}
+              disabled={!isCameraReady || countdown !== null}
+              className="btn-press w-20 h-20 rounded-full bg-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform shadow-lg"
+            >
+              <div className="w-16 h-16 rounded-full border-4 border-black/10" />
+            </button>
+            <div className="w-12" />
           </div>
         )}
       </div>

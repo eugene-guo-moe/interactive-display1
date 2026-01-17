@@ -38,7 +38,7 @@ export const questions: Question[] = [
     id: 3,
     question: 'Where does your heart lean?',
     icon: '💫',
-    backgroundImage: 'https://images.unsplash.com/photo-1637062285049-7999f31f62ae?w=1920&q=80',
+    backgroundImage: 'https://images.unsplash.com/photo-1585714778157-3d600c22dcaf?w=1920&q=80',
     options: [
       { label: 'A', text: 'Looking back — learning wisdom from our journey', emoji: '🏛️' },
       { label: 'B', text: 'Right here — celebrating the Singapore of today', emoji: '🇸🇬' },

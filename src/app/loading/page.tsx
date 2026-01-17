@@ -5,10 +5,10 @@ import { useQuiz } from '@/context/QuizContext'
 import { useEffect, useState, useRef } from 'react'
 
 const loadingSteps = [
-  { text: 'Preparing your photo', icon: '📸', description: 'Analyzing image quality' },
-  { text: 'Creating your scene', icon: '🎨', description: 'Generating Singapore backdrop' },
-  { text: 'Adding your face', icon: '✨', description: 'Blending you into the scene' },
-  { text: 'Final touches', icon: '🎬', description: 'Polishing the details' },
+  { text: 'Preparing your photo', description: 'Analyzing image quality' },
+  { text: 'Creating your scene', description: 'Generating Singapore backdrop' },
+  { text: 'Adding your face', description: 'Blending you into the scene' },
+  { text: 'Final touches', description: 'Polishing the details' },
 ]
 
 const funFactsPast = [
@@ -16,6 +16,13 @@ const funFactsPast = [
   'The iconic Merlion statue was first unveiled in 1972 at the mouth of the Singapore River.',
   'Kampong Glam was once home to the Malay royalty and is now a vibrant heritage district.',
   'The old National Library on Stamford Road opened in 1960 and became a beloved landmark.',
+]
+
+const funFactsPresent = [
+  'Singapore is home to over 5.6 million people across 63 islands.',
+  'Changi Airport has been voted the world\'s best airport for 12 consecutive years.',
+  'Singapore has over 80 hawker centres serving affordable local food.',
+  'The Singapore Botanic Gardens is a UNESCO World Heritage Site since 2015.',
 ]
 
 const funFactsFuture = [
@@ -27,9 +34,15 @@ const funFactsFuture = [
 
 const stepDurations = [5000, 15000, 12000, 8000]
 
+const backgroundImages = {
+  past: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80', // Chinatown Singapore
+  present: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80', // Marina Bay Sands
+  future: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80', // TRON-style light trails
+}
+
 export default function LoadingPage() {
   const router = useRouter()
-  const { photoData, answers, setResultImageUrl, getTimePeriod } = useQuiz()
+  const { photoData, answers, setResultImageUrl, getTimePeriod, generationMethod } = useQuiz()
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
   const [currentFact, setCurrentFact] = useState(0)
@@ -38,7 +51,7 @@ export default function LoadingPage() {
   const isComplete = useRef(false)
 
   const timePeriod = getTimePeriod()
-  const funFacts = timePeriod === 'past' ? funFactsPast : funFactsFuture
+  const funFacts = timePeriod === 'past' ? funFactsPast : timePeriod === 'present' ? funFactsPresent : funFactsFuture
 
   // Rotate fun facts
   useEffect(() => {
@@ -101,6 +114,7 @@ export default function LoadingPage() {
           body: JSON.stringify({
             photo: photoData,
             answers: answers,
+            generationMethod: generationMethod,
           }),
         })
 
@@ -129,7 +143,7 @@ export default function LoadingPage() {
     }
 
     generateImage()
-  }, [photoData, answers, router, setResultImageUrl])
+  }, [photoData, answers, router, setResultImageUrl, generationMethod])
 
   const handleRetry = () => {
     hasStarted.current = false
@@ -143,32 +157,40 @@ export default function LoadingPage() {
     router.push('/')
   }
 
-  // Calculate circle properties
-  const circleRadius = 80
+  // Calculate circle properties for minimal ring
+  const circleRadius = 70
   const circumference = 2 * Math.PI * circleRadius
   const strokeDashoffset = circumference - (progress / 100) * circumference
 
+  const backgroundImage = backgroundImages[timePeriod as keyof typeof backgroundImages] || backgroundImages.present
+
   if (error) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 page-transition">
-        <div className="glass-card rounded-2xl p-10 text-center max-w-md border border-gold/10">
-          <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-gold/20">
-            <svg className="w-10 h-10 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="relative flex-1 flex flex-col items-center justify-center p-8 page-transition">
+        {/* Background image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+        <div className="relative z-10 rounded-2xl p-10 text-center max-w-md bg-white/[0.03] border border-white/10 backdrop-blur-sm">
+          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+            <svg className="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
             </svg>
           </div>
-          <h2 className="font-display text-2xl font-semibold text-white/90 mb-3">Something went wrong</h2>
+          <h2 className="font-display text-2xl font-semibold text-white mb-3">Something went wrong</h2>
           <p className="text-white/40 mb-8">{error}</p>
           <div className="flex gap-3">
             <button
               onClick={handleStartOver}
-              className="btn-press flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-medium hover:bg-white/10 hover:border-gold/30 transition-all"
+              className="btn-press flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-medium hover:bg-white/10 hover:border-white/20 transition-all"
             >
               Start Over
             </button>
             <button
               onClick={handleRetry}
-              className="btn-glow flex-1 py-3 rounded-xl bg-gold text-black font-semibold hover:bg-gold-light transition-all"
+              className="btn-press flex-1 py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold hover:bg-white/90 transition-all"
             >
               Try Again
             </button>
@@ -179,143 +201,74 @@ export default function LoadingPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 page-transition overflow-hidden">
-      {/* Background decorations - subtle gold shimmer */}
-      <div className={`absolute top-1/4 -left-32 w-64 h-64 rounded-full blur-3xl opacity-10 ${
-        timePeriod === 'past' ? 'bg-gold' : 'bg-silver'
-      }`} />
-      <div className={`absolute bottom-1/4 -right-32 w-64 h-64 rounded-full blur-3xl opacity-10 ${
-        timePeriod === 'past' ? 'bg-gold-light' : 'bg-silver-light'
-      }`} />
+    <div className="relative flex-1 flex flex-col items-center justify-center p-6 page-transition">
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+      />
+      <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 
-      {/* Circular progress */}
-      <div className="relative mb-8">
-        {/* SVG Circle */}
-        <svg className="w-48 h-48 -rotate-90" viewBox="0 0 200 200">
+      {/* Circular progress - Minimal Ring */}
+      <div className="relative z-10 mb-8">
+        <svg width="180" height="180" className="-rotate-90">
           {/* Background circle */}
           <circle
-            cx="100"
-            cy="100"
+            cx="90"
+            cy="90"
             r={circleRadius}
             fill="none"
             stroke="rgba(255,255,255,0.05)"
-            strokeWidth="4"
+            strokeWidth="2"
           />
           {/* Progress circle */}
           <circle
-            cx="100"
-            cy="100"
+            cx="90"
+            cy="90"
             r={circleRadius}
             fill="none"
-            stroke={`url(#gradient-${timePeriod})`}
-            strokeWidth="4"
+            stroke="rgba(255,255,255,0.8)"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             className="transition-all duration-300"
           />
-          {/* Gradient definition - luxury gold/silver */}
-          <defs>
-            <linearGradient id="gradient-past" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#D4AF37" />
-              <stop offset="100%" stopColor="#F7E7CE" />
-            </linearGradient>
-            <linearGradient id="gradient-future" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#E5E4E2" />
-              <stop offset="100%" stopColor="#C0C0C0" />
-            </linearGradient>
-          </defs>
         </svg>
-
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`font-display text-4xl font-bold ${
-            timePeriod === 'past' ? 'text-gold' : 'text-silver'
-          }`}>
+          <span className="font-display text-4xl font-semibold text-white">
             {Math.round(progress)}%
           </span>
         </div>
       </div>
 
       {/* Title */}
-      <h2 className={`font-display text-2xl md:text-3xl font-semibold mb-2 text-center ${
-        timePeriod === 'past' ? 'gradient-text-past' : 'gradient-text-future'
-      }`}>
-        {timePeriod === 'past' ? 'Traveling Back in Time' : 'Jumping to the Future'}
+      <h2 className="relative z-10 font-display text-xl font-medium text-white mb-2 text-center">
+        Creating your moment
       </h2>
-      <p className="text-white/30 text-sm mb-8">Creating your Singapore moment</p>
+      <p className="relative z-10 text-white/40 text-sm mb-8">{loadingSteps[currentStep].text}</p>
 
-      {/* Step timeline - luxury styling */}
-      <div className="w-full max-w-sm mb-8">
-        <div className="flex justify-between relative">
-          {/* Connecting line */}
-          <div className="absolute top-4 left-0 right-0 h-px bg-white/10" />
+      {/* Step dots - minimal */}
+      <div className="relative z-10 flex gap-3 mb-10">
+        {loadingSteps.map((_, i) => (
           <div
-            className={`absolute top-4 left-0 h-px transition-all duration-500 ${
-              timePeriod === 'past' ? 'bg-gold' : 'bg-silver'
+            key={i}
+            className={`rounded-full transition-all duration-300 ${
+              i <= currentStep
+                ? 'w-2 h-2 bg-white/90'
+                : 'w-1.5 h-1.5 bg-white/20'
             }`}
-            style={{ width: `${(currentStep / (loadingSteps.length - 1)) * 100}%` }}
           />
-
-          {loadingSteps.map((step, index) => (
-            <div key={index} className="relative flex flex-col items-center z-10">
-              {/* Step circle */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg transition-all duration-300 ${
-                index < currentStep
-                  ? timePeriod === 'past'
-                    ? 'bg-gold text-black'
-                    : 'bg-silver text-black'
-                  : index === currentStep
-                    ? timePeriod === 'past'
-                      ? 'bg-gold/20 ring-1 ring-gold'
-                      : 'bg-silver/20 ring-1 ring-silver'
-                    : 'bg-white/5 border border-white/10'
-              }`}>
-                {index < currentStep ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <span className={index === currentStep ? '' : 'opacity-30'}>{step.icon}</span>
-                )}
-              </div>
-
-              {/* Step label (only for current) */}
-              {index === currentStep && (
-                <div className="absolute top-12 whitespace-nowrap text-center">
-                  <p className={`text-sm font-medium ${
-                    timePeriod === 'past' ? 'text-gold' : 'text-silver'
-                  }`}>
-                    {step.text}
-                  </p>
-                  <p className="text-xs text-white/30">{step.description}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
-      {/* Spacer for step label */}
-      <div className="h-12" />
-
-      {/* Fun fact card - luxury styling */}
-      <div className="glass-card rounded-xl p-5 max-w-md w-full border border-gold/10">
-        <div className="flex items-start gap-3">
-          <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-            timePeriod === 'past' ? 'bg-gold/10 ring-1 ring-gold/20' : 'bg-silver/10 ring-1 ring-silver/20'
-          }`}>
-            <svg className={`w-5 h-5 ${timePeriod === 'past' ? 'text-gold' : 'text-silver'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-            </svg>
-          </div>
-          <div className="flex-1 min-h-[3rem]">
-            <p className="text-xs text-white/30 mb-1 tracking-wide uppercase">Did you know?</p>
-            <p className="text-sm text-white/60 leading-relaxed transition-opacity duration-500">
-              {funFacts[currentFact]}
-            </p>
-          </div>
-        </div>
+      {/* Fun fact card - minimal */}
+      <div className="relative z-10 max-w-sm w-full p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
+        <p className="text-[11px] text-white/30 mb-2 tracking-widest uppercase">Did you know?</p>
+        <p className="text-sm text-white/50 leading-relaxed transition-opacity duration-500">
+          {funFacts[currentFact]}
+        </p>
         {/* Fact indicators */}
         <div className="flex justify-center gap-1.5 mt-4">
           {funFacts.map((_, index) => (
@@ -323,7 +276,7 @@ export default function LoadingPage() {
               key={index}
               className={`h-1 rounded-full transition-all duration-300 ${
                 index === currentFact
-                  ? `w-6 ${timePeriod === 'past' ? 'bg-gold' : 'bg-silver'}`
+                  ? 'w-5 bg-white/60'
                   : 'w-1.5 bg-white/10'
               }`}
             />

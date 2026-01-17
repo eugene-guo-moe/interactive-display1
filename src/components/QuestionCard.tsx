@@ -1,50 +1,35 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 
 interface OptionProps {
-  emoji: string
+  label: string
   text: string
   selected: boolean
   onClick: () => void
-  index: number
-  totalOptions: number
+  visible: boolean
 }
 
-function Option({ emoji, text, selected, onClick, index, totalOptions }: OptionProps) {
-  // For 2 options (question 3), make them full width
-  const gridClass = totalOptions === 2 ? 'col-span-2' : ''
-
+function Option({ label, text, selected, onClick, visible }: OptionProps) {
   return (
     <button
       onClick={onClick}
-      className={`${gridClass} btn-press relative w-full h-full min-h-[120px] md:min-h-[140px] p-4 md:p-5 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 ${
+      className={`p-5 md:p-8 lg:p-10 rounded-2xl backdrop-blur-md border transition-all duration-300 ${
+        visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      } ${
         selected
-          ? 'bg-gold/10 border-2 border-gold shadow-lg shadow-gold/20 scale-[1.02]'
-          : 'bg-white/[0.03] border border-white/10 hover:border-gold/40 hover:bg-white/[0.05] hover:scale-[1.01]'
+          ? 'bg-white/95 text-[#1e3a5f] border-white shadow-xl'
+          : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
-      style={{
-        animationDelay: `${index * 0.1}s`,
-      }}
     >
-      {/* Selection checkmark */}
-      {selected && (
-        <div className="absolute top-3 right-3 w-7 h-7 bg-gold rounded-full flex items-center justify-center shadow-md shadow-gold/30">
-          <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-      )}
-
-      {/* Emoji */}
-      <span className="text-4xl md:text-5xl">{emoji}</span>
-
-      {/* Text */}
-      <span className={`font-medium text-center text-sm md:text-base leading-tight px-1 transition-colors ${
-        selected ? 'text-gold-light' : 'text-white/80'
+      <span className={`inline-block px-2.5 py-1 rounded text-xs md:text-sm font-bold mb-2 md:mb-4 ${
+        selected
+          ? 'bg-[#1e3a5f] text-white'
+          : 'bg-white/20 text-white/80'
       }`}>
-        {text}
+        {label}
       </span>
+      <span className="font-medium text-sm md:text-base lg:text-lg leading-relaxed block">{text}</span>
     </button>
   )
 }
@@ -58,37 +43,13 @@ function StepIndicator({ current, total }: StepIndicatorProps) {
   return (
     <div className="flex items-center justify-center gap-3">
       {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className="flex items-center">
-          {/* Step dot */}
-          <div className={`relative w-10 h-10 rounded-full flex items-center justify-center font-display font-semibold text-sm transition-all duration-500 ${
-            i + 1 === current
-              ? 'bg-gold text-black scale-110 shadow-lg shadow-gold/30'
-              : i + 1 < current
-                ? 'bg-gold/20 text-gold border border-gold/40'
-                : 'bg-white/5 text-white/30 border border-white/10'
-          }`}>
-            {i + 1 < current ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              i + 1
-            )}
-            {/* Active subtle glow */}
-            {i + 1 === current && (
-              <div className="absolute inset-0 rounded-full bg-gold animate-ping opacity-20" />
-            )}
-          </div>
-
-          {/* Connector line */}
-          {i < total - 1 && (
-            <div className={`w-8 md:w-12 h-px mx-1 transition-all duration-500 ${
-              i + 1 < current
-                ? 'bg-gold/50'
-                : 'bg-white/10'
-            }`} />
-          )}
-        </div>
+        <div key={i} className={`w-2 h-2 rounded-full transition-all duration-300 ${
+          i + 1 === current
+            ? 'bg-white scale-125'
+            : i + 1 < current
+              ? 'bg-white/60'
+              : 'bg-white/30'
+        }`} />
       ))}
     </div>
   )
@@ -99,6 +60,7 @@ interface QuestionCardProps {
   totalQuestions: number
   question: string
   questionIcon?: string
+  backgroundImage?: string
   options: { label: string; text: string; emoji?: string }[]
   selectedAnswer: string | null
   onSelect: (answer: string) => void
@@ -109,56 +71,96 @@ export default function QuestionCard({
   questionNumber,
   totalQuestions,
   question,
-  questionIcon,
+  backgroundImage,
   options,
   selectedAnswer,
   onSelect,
   children,
 }: QuestionCardProps) {
+  const [displayedText, setDisplayedText] = useState('')
+  const [showOptions, setShowOptions] = useState<number[]>([])
+  const [typingComplete, setTypingComplete] = useState(false)
+  const [showBackButton, setShowBackButton] = useState(false)
+
+  // Typewriter effect
+  useEffect(() => {
+    setDisplayedText('')
+    setShowOptions([])
+    setTypingComplete(false)
+    setShowBackButton(false)
+
+    let i = 0
+    const typeInterval = setInterval(() => {
+      if (i < question.length) {
+        setDisplayedText(question.slice(0, i + 1))
+        i++
+      } else {
+        clearInterval(typeInterval)
+        setTypingComplete(true)
+        // Show options after typing completes (slower stagger)
+        options.forEach((_, idx) => {
+          setTimeout(() => setShowOptions(prev => [...prev, idx]), 500 + idx * 350)
+        })
+        // Show back button after all options
+        setTimeout(() => setShowBackButton(true), 500 + options.length * 350 + 300)
+      }
+    }, 30)
+
+    return () => clearInterval(typeInterval)
+  }, [questionNumber, question, options])
+
   return (
-    <div className="relative flex-1 flex flex-col p-4 md:p-6 page-transition overflow-hidden">
-      {/* Subtle background decoration - luxury gold shimmer */}
-      <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-gold/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-56 h-56 bg-gradient-to-tr from-gold/3 to-transparent rounded-full blur-3xl pointer-events-none" />
+    <div className="relative flex-1 flex flex-col overflow-hidden">
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none transition-opacity duration-500"
+        style={{ backgroundImage: `url(${backgroundImage || 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80'})` }}
+      />
+      <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
-      {/* Step indicator */}
-      <div className="relative z-10 mb-8">
-        <StepIndicator current={questionNumber} total={totalQuestions} />
-      </div>
+      {/* Content */}
+      <div className="relative z-10 flex-1 flex flex-col p-4 md:p-6">
+        {/* Step indicator */}
+        <div className="mb-6 pt-2">
+          <StepIndicator current={questionNumber} total={totalQuestions} />
+        </div>
 
-      {/* Question section */}
-      <div className="relative z-10 mb-8 text-center">
-        {/* Question icon */}
-        {questionIcon && (
-          <div className="text-4xl mb-4 animate-float opacity-90">
-            {questionIcon}
+        {/* Question section with typewriter */}
+        <div className="mb-8 text-center px-4">
+          <h2 className="font-display text-2xl md:text-3xl font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg">
+            {displayedText}
+            {!typingComplete && (
+              <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
+            )}
+          </h2>
+        </div>
+
+        {/* Options - Dynamic layout based on count */}
+        <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12">
+          <div className={`grid gap-4 md:gap-6 lg:gap-8 w-full ${
+            options.length === 3
+              ? 'grid-cols-1 max-w-lg'
+              : 'grid-cols-2 max-w-xl lg:max-w-3xl'
+          }`}>
+            {options.map((option, index) => (
+              <Option
+                key={option.label}
+                label={option.label}
+                text={option.text}
+                selected={selectedAnswer === option.label}
+                onClick={() => onSelect(option.label)}
+                visible={showOptions.includes(index)}
+              />
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Question text */}
-        <h2 className="font-display text-xl md:text-2xl font-semibold text-white/90 leading-tight max-w-xl mx-auto tracking-tight">
-          {question}
-        </h2>
-      </div>
-
-      {/* Options - 2x2 Grid with stagger animation */}
-      <div className="relative z-10 flex-1 grid grid-cols-2 gap-3 md:gap-4 mb-6 max-w-2xl mx-auto w-full stagger-children">
-        {options.map((option, index) => (
-          <Option
-            key={option.label}
-            emoji={option.emoji || option.label}
-            text={option.text}
-            selected={selectedAnswer === option.label}
-            onClick={() => onSelect(option.label)}
-            index={index}
-            totalOptions={options.length}
-          />
-        ))}
-      </div>
-
-      {/* Navigation buttons */}
-      <div className="relative z-10 max-w-xl mx-auto w-full">
-        {children}
+        {/* Navigation buttons */}
+        <div className={`mt-8 max-w-xl mx-auto w-full px-4 pb-4 transition-all duration-300 ${
+          showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+        }`}>
+          {children}
+        </div>
       </div>
     </div>
   )

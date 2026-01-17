@@ -4,7 +4,7 @@ import type { QuizAnswers } from '@/types/quiz'
 export const runtime = 'edge'
 
 // Worker URL - hardcoded for now
-const WORKER_URL = 'https://history-vs-future-worker.eugene-ff3.workers.dev'
+const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
 
 // Build prompt based on quiz answers (inlined to avoid import issues)
 function buildPrompt(answers: QuizAnswers): string {
@@ -61,12 +61,13 @@ function buildPrompt(answers: QuizAnswers): string {
 interface GenerateRequest {
   photo: string // base64 image data
   answers: QuizAnswers
+  generationMethod?: 'v1' | 'v2' // v1 = face swap, v2 = inpainting
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: GenerateRequest = await request.json()
-    const { photo, answers } = body
+    const { photo, answers, generationMethod = 'v1' } = body
 
     // Validate inputs
     if (!photo || !answers.q1 || !answers.q2 || !answers.q3) {
@@ -80,8 +81,14 @@ export async function POST(request: NextRequest) {
     const prompt = buildPrompt(answers)
     const timePeriod = answers.q3 === 'A' ? 'past' : 'future'
 
+    // Choose endpoint based on generation method
+    // v1 = face swap pipeline (original)
+    // v2 = inpainting pipeline (preserves user's actual appearance)
+    const endpoint = generationMethod === 'v2' ? '/generate-v2' : '/generate'
+    console.log(`Using generation method: ${generationMethod} (${endpoint})`)
+
     // Call the Cloudflare Worker
-    const workerResponse = await fetch(`${WORKER_URL}/generate`, {
+    const workerResponse = await fetch(`${WORKER_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,6 +115,7 @@ export async function POST(request: NextRequest) {
       prompt,
       timePeriod,
       mode: 'production',
+      generationMethod,
     })
   } catch (error) {
     console.error('Generate API error:', error)

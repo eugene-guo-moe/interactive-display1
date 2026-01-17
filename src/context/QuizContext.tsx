@@ -5,6 +5,8 @@ import type { QuizAnswers } from '@/types/quiz'
 
 export type { QuizAnswers }
 
+export type GenerationMethod = 'v1' | 'v2'
+
 interface QuizContextType {
   answers: QuizAnswers
   setAnswer: (question: keyof QuizAnswers, answer: string) => void
@@ -13,7 +15,9 @@ interface QuizContextType {
   resultImageUrl: string | null
   setResultImageUrl: (url: string | null) => void
   resetQuiz: () => void
-  getTimePeriod: () => 'past' | 'future'
+  getTimePeriod: () => 'past' | 'present' | 'future'
+  generationMethod: GenerationMethod
+  setGenerationMethod: (method: GenerationMethod) => void
 }
 
 const initialAnswers: QuizAnswers = {
@@ -28,6 +32,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers)
   const [photoData, setPhotoData] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
+  const [generationMethod, setGenerationMethod] = useState<GenerationMethod>('v1')
 
   const setAnswer = useCallback((question: keyof QuizAnswers, answer: string) => {
     setAnswers(prev => ({ ...prev, [question]: answer }))
@@ -39,8 +44,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setResultImageUrl(null)
   }, [])
 
-  const getTimePeriod = useCallback((): 'past' | 'future' => {
-    return answers.q3 === 'A' ? 'past' : 'future'
+  const getTimePeriod = useCallback((): 'past' | 'present' | 'future' => {
+    return answers.q3 === 'A' ? 'past' : answers.q3 === 'B' ? 'present' : 'future'
   }, [answers.q3])
 
   return (
@@ -54,6 +59,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         setResultImageUrl,
         resetQuiz,
         getTimePeriod,
+        generationMethod,
+        setGenerationMethod,
       }}
     >
       {children}
