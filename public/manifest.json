@@ -1,0 +1,28 @@
+{
+  "name": "History vs Future - Singapore Interactive Experience",
+  "short_name": "SG History vs Future",
+  "description": "An interactive booth experience exploring Singapore's past and future",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0C0A1D",
+  "theme_color": "#06B6D4",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "entertainment"],
+  "lang": "en",
+  "scope": "/",
+  "prefer_related_applications": false
+}

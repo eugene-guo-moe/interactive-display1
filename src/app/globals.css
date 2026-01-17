@@ -1,0 +1,352 @@
+/* Fontshare: Clash Display + Satoshi */
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  /* Luxury color palette */
+  --luxury-gold: #D4AF37;
+  --luxury-champagne: #F7E7CE;
+  --luxury-silver: #C0C0C0;
+  --luxury-platinum: #E5E4E2;
+  --luxury-black: #0A0A0A;
+  --luxury-charcoal: #1A1A1A;
+  --luxury-surface: #141414;
+  --luxury-border: #2A2A2A;
+  /* Legacy mappings for compatibility */
+  --sg-dark: #0A0A0A;
+  --sg-surface: #141414;
+  --sg-border: #2A2A2A;
+  --sg-cyan: #D4AF37;
+  --sg-pink: #C0C0C0;
+  --sg-purple: #B8860B;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: var(--sg-dark);
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+}
+
+/* Elegant background gradient - subtle golden shimmer */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(192, 192, 192, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(247, 231, 206, 0.03) 0%, transparent 40%);
+  animation: subtleShimmer 30s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle grain texture overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.015;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes subtleShimmer {
+  0%, 100% { transform: translate(0, 0); opacity: 1; }
+  50% { transform: translate(1%, 1%); opacity: 0.8; }
+}
+
+/* Kiosk mode styles */
+.kiosk-container {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  /* Safe area for notched phones */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Active/tap feedback for touch */
+.btn-press:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Camera video styles */
+.camera-video {
+  transform: scaleX(-1);
+  object-fit: cover;
+}
+
+/* Luxury glass card - darker, more sophisticated */
+.glass-card {
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+/* Luxury glowing button */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--luxury-gold), var(--luxury-champagne), var(--luxury-silver));
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+  filter: blur(16px);
+}
+
+.btn-glow:hover::before {
+  opacity: 0.4;
+}
+
+.btn-glow:active {
+  transform: scale(0.98);
+}
+
+/* Elegant pulsing CTA button */
+.btn-pulse {
+  animation: btnPulse 3s ease-in-out infinite;
+}
+
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(212, 175, 55, 0); }
+}
+
+/* Progress bar animation */
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.progress-bar {
+  animation: progress-pulse 1.5s ease-in-out infinite;
+}
+
+/* Smooth page transitions */
+.page-transition {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide up animation */
+.slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button press effect */
+.btn-press {
+  transition: all 0.2s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Gradient text for titles - Luxury gold */
+.gradient-text-past {
+  background: linear-gradient(135deg, #D4AF37, #F7E7CE, #B8860B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient text for titles - Luxury silver/platinum */
+.gradient-text-future {
+  background: linear-gradient(135deg, #E5E4E2, #C0C0C0, #A8A8A8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Primary gradient text - Gold accent */
+.gradient-text {
+  background: linear-gradient(135deg, var(--luxury-gold), var(--luxury-champagne), var(--luxury-silver));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Elegant glow text effect */
+.text-glow {
+  text-shadow: 0 0 40px rgba(212, 175, 55, 0.3), 0 0 80px rgba(247, 231, 206, 0.15);
+}
+
+/* Elegant floating animation - slower, gentler */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Luxury shimmer effect for loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.08) 50%,
+    rgba(212, 175, 55, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
+}
+
+/* Scanning line animation for camera */
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite;
+}
+
+/* Selection highlight - Luxury gold */
+.option-selected {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(247, 231, 206, 0.05));
+  border-color: var(--luxury-gold) !important;
+  box-shadow:
+    0 0 30px rgba(212, 175, 55, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Luxury reveal animation */
+@keyframes luxuryReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.luxury-reveal {
+  animation: luxuryReveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Staggered children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: luxuryReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+
+/* Subtle gold glow animation */
+@keyframes subtleGoldGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.1); }
+  50% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.2); }
+}
+
+.gold-glow {
+  animation: subtleGoldGlow 4s ease-in-out infinite;
+}
+
+/* Scrollbar hiding for fullscreen */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Better focus states - luxury gold */
+button:focus-visible {
+  outline: 2px solid var(--luxury-gold);
+  outline-offset: 2px;
+}
+
+/* Responsive typography base */
+@layer base {
+  h1 {
+    @apply font-display text-4xl md:text-6xl font-bold tracking-tight;
+  }
+  h2 {
+    @apply font-display text-2xl md:text-4xl font-semibold tracking-tight;
+  }
+  h3 {
+    @apply font-display text-xl md:text-2xl font-semibold;
+  }
+}

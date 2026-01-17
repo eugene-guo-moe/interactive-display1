@@ -1,0 +1,20 @@
+name = "history-vs-future-worker"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+# Environment variables (set via wrangler secret)
+# REMOVE_BG_KEY - API key for remove.bg
+# FAL_KEY - API key for FAL.ai
+
+[vars]
+PUBLIC_URL = "https://history-vs-future-worker.eugene-ff3.workers.dev"
+
+# R2 bucket binding
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "history-future-images"
+
+# Development settings
+[dev]
+port = 8787
+local_protocol = "http"
