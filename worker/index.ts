@@ -555,6 +555,91 @@ export default {
       }
     }
 
+    // Test R2 upload endpoint (for debugging - no auth required)
+    if (url.pathname === '/test-r2' && request.method === 'POST') {
+      const testId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      const testPath = `generated/present/${testId}.jpg`
+      const testData = new TextEncoder().encode('test image data')
+
+      try {
+        await env.IMAGES_BUCKET.put(testPath, testData, {
+          httpMetadata: { contentType: 'image/jpeg' },
+        })
+
+        // Verify it was written
+        const obj = await env.IMAGES_BUCKET.get(testPath)
+        const exists = obj !== null
+
+        return new Response(JSON.stringify({
+          success: true,
+          testPath,
+          publicUrl: `${env.PUBLIC_URL}/${testPath}`,
+          verified: exists,
+        }), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (err) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: err instanceof Error ? err.message : String(err),
+        }), {
+          status: 500,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    // Test fetch and R2 upload (replicates background flow)
+    if (url.pathname === '/test-fetch-r2' && request.method === 'POST') {
+      try {
+        const body = await request.json() as { imageUrl?: string }
+        if (!body.imageUrl) {
+          return new Response(JSON.stringify({ error: 'imageUrl required' }), {
+            status: 400,
+            headers: { ...allHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        const testId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        const testPath = `generated/present/${testId}.jpg`
+
+        // Fetch image
+        const fetchStart = Date.now()
+        const imageData = await fetchImage(body.imageUrl)
+        const fetchTime = Date.now() - fetchStart
+
+        // Upload to R2
+        const uploadStart = Date.now()
+        await env.IMAGES_BUCKET.put(testPath, imageData, {
+          httpMetadata: { contentType: 'image/jpeg' },
+        })
+        const uploadTime = Date.now() - uploadStart
+
+        // Verify
+        const obj = await env.IMAGES_BUCKET.get(testPath)
+
+        return new Response(JSON.stringify({
+          success: true,
+          testPath,
+          publicUrl: `${env.PUBLIC_URL}/${testPath}`,
+          fetchTime,
+          uploadTime,
+          imageSize: imageData.byteLength,
+          verified: obj !== null,
+        }), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (err) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: err instanceof Error ? err.message : String(err),
+        }), {
+          status: 500,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     // Image generation endpoint
     if (url.pathname === '/generate' && request.method === 'POST') {
       // Verify API key
@@ -682,57 +767,29 @@ export default {
         const imagePath = `generated/${timePeriod}/${imageId}.jpg`
         const publicUrl = `${env.PUBLIC_URL}/${imagePath}`
 
-        // Step 4: Upload to R2 in BACKGROUND using waitUntil
-        // This allows us to return the FAL.ai URL immediately for faster display
-        ctx.waitUntil(
-          (async () => {
-            // Helper to fetch with retries (CDN might need time to replicate)
-            async function fetchWithRetry(url: string, maxRetries = 3): Promise<ArrayBuffer> {
-              let lastError: Error | null = null
-              for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                  if (attempt > 0) {
-                    // Wait before retry (exponential backoff: 2s, 4s)
-                    await new Promise(r => setTimeout(r, 2000 * attempt))
-                    console.log(`[${imageId}] Retry attempt ${attempt + 1} for FAL CDN fetch`)
-                  }
-                  return await fetchImage(url)
-                } catch (err) {
-                  lastError = err instanceof Error ? err : new Error(String(err))
-                  console.log(`[${imageId}] Fetch attempt ${attempt + 1} failed: ${lastError.message}`)
-                }
-              }
-              throw lastError || new Error('All fetch attempts failed')
-            }
+        // Step 4: Fetch and upload to R2 (synchronous for reliability)
+        const r2StartTime = Date.now()
+        const finalImage = await fetchImage(generatedImageUrl)
+        timings['fal_fetch'] = Date.now() - r2StartTime
+        console.log(`[${imageId}] Fetch from FAL CDN: ${timings['fal_fetch']}ms`)
 
-            try {
-              const fetchStartTime = Date.now()
-              const finalImage = await fetchWithRetry(generatedImageUrl)
-              console.log(`[${imageId}] Fetch from FAL CDN: ${Date.now() - fetchStartTime}ms`)
+        const uploadStartTime = Date.now()
+        await env.IMAGES_BUCKET.put(imagePath, finalImage, {
+          httpMetadata: {
+            contentType: 'image/jpeg',
+          },
+          customMetadata: {
+            timePeriod,
+            createdAt: new Date().toISOString(),
+          },
+        })
+        timings['r2_upload'] = Date.now() - uploadStartTime
+        console.log(`[${imageId}] R2 upload: ${timings['r2_upload']}ms`)
 
-              const uploadStartTime = Date.now()
-              await env.IMAGES_BUCKET.put(imagePath, finalImage, {
-                httpMetadata: {
-                  contentType: 'image/jpeg',
-                },
-                customMetadata: {
-                  timePeriod,
-                  createdAt: new Date().toISOString(),
-                },
-              })
-              console.log(`[${imageId}] R2 upload: ${Date.now() - uploadStartTime}ms`)
-              console.log(`[${imageId}] Total background: ${Date.now() - falStartTime - timings['fal_generation']}ms`)
-            } catch (err) {
-              console.error(`[${imageId}] Background upload failed:`, err)
-            }
-          })()
-        )
-
-        // Return FAL.ai URL immediately for fast display
-        // QR code uses R2 URL (will be ready in a few seconds)
+        // Return R2 URL (permanent) for both display and QR code
         const response: GenerateResponse = {
-          imageUrl: generatedImageUrl, // FAL.ai URL - fast, temporary
-          qrUrl: publicUrl,            // R2 URL - permanent, for QR code
+          imageUrl: publicUrl,  // R2 URL - permanent, reliable
+          qrUrl: publicUrl,     // R2 URL - permanent, for QR code
         }
 
         console.log(`[${imageId}] Total response time: ${Date.now() - startTime}ms`)

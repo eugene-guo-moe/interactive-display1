@@ -28,12 +28,11 @@ export default function ResultPage() {
   const { resultImageUrl, qrUrl, getTimePeriod, resetQuiz, photoData } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [r2Ready, setR2Ready] = useState(false)
 
   const timePeriod = getTimePeriod()
   const currentPhase = phases[timePeriod as keyof typeof phases] || phases.present
 
-  // Use the result image URL directly (FAL.ai URL)
+  // Use the result image URL directly (R2 URL from worker)
   const displayImageUrl = resultImageUrl || photoData
 
   useEffect(() => {
@@ -48,53 +47,13 @@ export default function ResultPage() {
     return () => clearTimeout(timer)
   }, [resultImageUrl, photoData, router])
 
-  // Poll R2 URL until it's ready, then silently switch
-  useEffect(() => {
-    if (!qrUrl || r2Ready) return
-
-    // If qrUrl is same as resultImageUrl (both FAL.ai), no need to poll
-    if (qrUrl === resultImageUrl) {
-      setR2Ready(true)
-      return
-    }
-
-    let cancelled = false
-    const pollInterval = 2000 // Check every 2 seconds
-    const maxAttempts = 30 // Max 60 seconds of polling
-
-    const checkR2Ready = async (attempt: number) => {
-      if (cancelled || attempt >= maxAttempts) return
-
-      try {
-        const response = await fetch(qrUrl, { method: 'HEAD' })
-        if (response.ok) {
-          setR2Ready(true)
-          return
-        }
-      } catch {
-        // R2 not ready yet, continue polling
-      }
-
-      // Schedule next check
-      setTimeout(() => checkR2Ready(attempt + 1), pollInterval)
-    }
-
-    // Start polling after a short delay (give R2 upload a head start)
-    const startTimer = setTimeout(() => checkR2Ready(0), 3000)
-
-    return () => {
-      cancelled = true
-      clearTimeout(startTimer)
-    }
-  }, [qrUrl, resultImageUrl, r2Ready])
-
   const handleStartOver = () => {
     resetQuiz()
     router.push('/')
   }
 
-  // Use R2 URL for download if ready, otherwise use FAL.ai URL
-  const activeDownloadUrl = r2Ready && qrUrl ? qrUrl : resultImageUrl
+  // Use the result URL for download (now always R2 URL from worker)
+  const activeDownloadUrl = resultImageUrl
 
   const handleDownload = async () => {
     if (!activeDownloadUrl) return
