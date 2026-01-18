@@ -16,6 +16,8 @@ interface QuizContextType {
   setResultImageUrl: (url: string | null) => void
   qrUrl: string | null
   setQrUrl: (url: string | null) => void
+  r2Path: string | null
+  setR2Path: (path: string | null) => void
   resetQuiz: () => void
   getTimePeriod: () => 'past' | 'present' | 'future'
   generationMethod: GenerationMethod
@@ -35,6 +37,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [photoData, setPhotoData] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [r2Path, setR2Path] = useState<string | null>(null)
   const [generationMethod, setGenerationMethod] = useState<GenerationMethod>('v1')
 
   const setAnswer = useCallback((question: keyof QuizAnswers, answer: string) => {
@@ -46,6 +49,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setPhotoData(null)
     setResultImageUrl(null)
     setQrUrl(null)
+    setR2Path(null)
   }, [])
 
   const getTimePeriod = useCallback((): 'past' | 'present' | 'future' => {
@@ -63,6 +67,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         setResultImageUrl,
         qrUrl,
         setQrUrl,
+        r2Path,
+        setR2Path,
         resetQuiz,
         getTimePeriod,
         generationMethod,

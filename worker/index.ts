@@ -36,8 +36,19 @@ interface GenerateRequest {
 }
 
 interface GenerateResponse {
-  imageUrl: string
-  qrUrl: string
+  imageUrl: string  // FAL.ai URL for immediate display
+  r2Path: string    // Path for R2 upload (frontend will call /upload-to-r2)
+  timePeriod: string
+}
+
+interface UploadToR2Request {
+  falUrl: string
+  r2Path: string
+  timePeriod: string
+}
+
+interface UploadToR2Response {
+  r2Url: string
 }
 
 // Security constants
@@ -763,33 +774,15 @@ export default {
         console.log(`[${imageId}] FAL.ai generation: ${timings['fal_generation']}ms`)
         console.log(`[${imageId}] FAL.ai URL: ${generatedImageUrl}`)
 
-        // Generate R2 path for permanent storage
+        // Generate R2 path for later upload by frontend
         const imagePath = `generated/${timePeriod}/${imageId}.jpg`
-        const publicUrl = `${env.PUBLIC_URL}/${imagePath}`
 
-        // Step 4: Fetch and upload to R2 (synchronous for reliability)
-        const r2StartTime = Date.now()
-        const finalImage = await fetchImage(generatedImageUrl)
-        timings['fal_fetch'] = Date.now() - r2StartTime
-        console.log(`[${imageId}] Fetch from FAL CDN: ${timings['fal_fetch']}ms`)
-
-        const uploadStartTime = Date.now()
-        await env.IMAGES_BUCKET.put(imagePath, finalImage, {
-          httpMetadata: {
-            contentType: 'image/jpeg',
-          },
-          customMetadata: {
-            timePeriod,
-            createdAt: new Date().toISOString(),
-          },
-        })
-        timings['r2_upload'] = Date.now() - uploadStartTime
-        console.log(`[${imageId}] R2 upload: ${timings['r2_upload']}ms`)
-
-        // Return R2 URL (permanent) for both display and QR code
+        // Return FAL.ai URL immediately for fast display
+        // Frontend will call /upload-to-r2 to get permanent R2 URL
         const response: GenerateResponse = {
-          imageUrl: publicUrl,  // R2 URL - permanent, reliable
-          qrUrl: publicUrl,     // R2 URL - permanent, for QR code
+          imageUrl: generatedImageUrl,  // FAL.ai URL - fast CDN
+          r2Path: imagePath,            // Path for R2 upload
+          timePeriod,
         }
 
         console.log(`[${imageId}] Total response time: ${Date.now() - startTime}ms`)
@@ -804,6 +797,71 @@ export default {
             status: 500,
             headers: { ...allHeaders, 'Content-Type': 'application/json' },
           }
+        )
+      }
+    }
+
+    // Upload FAL.ai image to R2 for permanent storage
+    // Called by frontend after displaying FAL.ai image
+    if (url.pathname === '/upload-to-r2' && request.method === 'POST') {
+      try {
+        const body = await request.json() as UploadToR2Request
+        const { falUrl, r2Path, timePeriod } = body
+
+        // Validate required fields
+        if (!falUrl || !r2Path || !timePeriod) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required fields: falUrl, r2Path, timePeriod' }),
+            { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Validate r2Path format for security
+        if (!isValidR2Path(r2Path)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid r2Path format' }),
+            { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Validate FAL.ai URL
+        if (!falUrl.includes('fal.media') && !falUrl.includes('fal.ai')) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid FAL URL' }),
+            { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        console.log(`[upload-to-r2] Fetching from FAL: ${falUrl}`)
+        const fetchStart = Date.now()
+
+        // Fetch image from FAL.ai CDN
+        const finalImage = await fetchImage(falUrl)
+        console.log(`[upload-to-r2] FAL fetch: ${Date.now() - fetchStart}ms`)
+
+        // Upload to R2
+        const uploadStart = Date.now()
+        await env.IMAGES_BUCKET.put(r2Path, finalImage, {
+          httpMetadata: { contentType: 'image/jpeg' },
+          customMetadata: {
+            timePeriod,
+            createdAt: new Date().toISOString(),
+          },
+        })
+        console.log(`[upload-to-r2] R2 upload: ${Date.now() - uploadStart}ms`)
+
+        const r2Url = `${env.PUBLIC_URL}/${r2Path}`
+        console.log(`[upload-to-r2] Complete. R2 URL: ${r2Url}`)
+
+        const response: UploadToR2Response = { r2Url }
+        return new Response(JSON.stringify(response), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (error) {
+        console.error('[upload-to-r2] Error:', error)
+        return new Response(
+          JSON.stringify({ error: 'Failed to upload to R2' }),
+          { status: 500, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }

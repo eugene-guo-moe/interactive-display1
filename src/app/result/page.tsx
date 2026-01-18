@@ -23,17 +23,25 @@ const phases = {
   },
 }
 
+// Worker URL for R2 upload
+const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
+
 export default function ResultPage() {
   const router = useRouter()
-  const { resultImageUrl, qrUrl, getTimePeriod, resetQuiz, photoData } = useQuiz()
+  const { resultImageUrl, qrUrl, setQrUrl, r2Path, getTimePeriod, resetQuiz, photoData } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [r2Url, setR2Url] = useState<string | null>(null)
+  const [uploadingToR2, setUploadingToR2] = useState(false)
 
   const timePeriod = getTimePeriod()
   const currentPhase = phases[timePeriod as keyof typeof phases] || phases.present
 
-  // Use the result image URL directly (R2 URL from worker)
+  // Use FAL.ai URL for display (fast CDN)
   const displayImageUrl = resultImageUrl || photoData
+
+  // Use R2 URL for download/QR if available, otherwise FAL.ai URL
+  const downloadUrl = r2Url || qrUrl || resultImageUrl || ''
 
   useEffect(() => {
     // If no result image and no photo, redirect to start
@@ -47,27 +55,57 @@ export default function ResultPage() {
     return () => clearTimeout(timer)
   }, [resultImageUrl, photoData, router])
 
+  // Upload to R2 in background when page loads
+  useEffect(() => {
+    if (!resultImageUrl || !r2Path || r2Url || uploadingToR2) return
+
+    const uploadToR2 = async () => {
+      setUploadingToR2(true)
+      try {
+        console.log('[Result] Starting R2 upload...')
+        const response = await fetch(`${WORKER_URL}/upload-to-r2`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            falUrl: resultImageUrl,
+            r2Path: r2Path,
+            timePeriod: timePeriod,
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('[Result] R2 upload complete:', data.r2Url)
+          setR2Url(data.r2Url)
+          setQrUrl(data.r2Url) // Update context for consistency
+        } else {
+          console.error('[Result] R2 upload failed:', await response.text())
+        }
+      } catch (err) {
+        console.error('[Result] R2 upload error:', err)
+      } finally {
+        setUploadingToR2(false)
+      }
+    }
+
+    uploadToR2()
+  }, [resultImageUrl, r2Path, r2Url, uploadingToR2, timePeriod, setQrUrl])
+
   const handleStartOver = () => {
     resetQuiz()
     router.push('/')
   }
 
-  // Use the result URL for download (now always R2 URL from worker)
-  const activeDownloadUrl = resultImageUrl
-
   const handleDownload = async () => {
-    if (!activeDownloadUrl) return
+    if (!downloadUrl) return
 
     try {
       // Open in new tab for download
-      window.open(activeDownloadUrl, '_blank')
+      window.open(downloadUrl, '_blank')
     } catch (err) {
       console.error('Download error:', err)
     }
   }
-
-  // Start with FAL.ai URL, switch to R2 when ready
-  const downloadUrl = activeDownloadUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/download/demo`
 
   return (
     <div className="relative flex-1 flex flex-col page-transition overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', backgroundColor: '#050505' }}>

@@ -209,10 +209,8 @@ export async function POST(request: NextRequest) {
     const result = await workerResponse.json()
 
     return NextResponse.json({
-      imageUrl: result.imageUrl,
-      qrUrl: result.qrUrl,
-      sceneUrl: result.sceneUrl,
-      cutoutUrl: result.cutoutUrl,
+      imageUrl: result.imageUrl,  // FAL.ai URL for immediate display
+      r2Path: result.r2Path,      // Path for R2 upload
       prompt,
       timePeriod,
       mode: 'production',
