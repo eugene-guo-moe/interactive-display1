@@ -12,7 +12,7 @@ const loadingSteps = [
   { text: 'Final touches', description: 'Polishing the details' },
 ]
 
-const stepDurations = [12000, 36000, 31000, 11000] // Total: 90 seconds
+const stepDurations = [8000, 24000, 20000, 8000] // Total: 60 seconds
 
 const backgroundImages = {
   past: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80',
@@ -82,8 +82,8 @@ export default function LoadingPage() {
     if (hasStarted.current) return
     hasStarted.current = true
 
-    // Start slow progress animation (runs for 85 seconds to ~90%)
-    const totalDuration = 85000
+    // Start slow progress animation (runs for 55 seconds to ~90%)
+    const totalDuration = 55000
     const maxProgress = 90
     const startTime = Date.now()
 
@@ -171,10 +171,10 @@ export default function LoadingPage() {
       }
     })
 
-    // Auto-retry at 80 seconds if not complete
+    // Auto-retry at 50 seconds if not complete
     const retryTimeoutId = setTimeout(() => {
       if (!isComplete.current && retryCount.current === 0) {
-        console.log('Auto-retrying at 80 seconds...')
+        console.log('Auto-retrying at 50 seconds...')
         retryCount.current = 1
         // Abort the ongoing fetch request
         if (abortControllerRef.current) {
@@ -185,9 +185,9 @@ export default function LoadingPage() {
           // Retry also failed, will be caught by final timeout
         })
       }
-    }, 80000)
+    }, 50000)
 
-    // Final timeout at 90 seconds - show timeout UI
+    // Final timeout at 60 seconds - show timeout UI
     const finalTimeoutId = setTimeout(() => {
       if (!isComplete.current) {
         setTimedOut(true)
@@ -196,7 +196,7 @@ export default function LoadingPage() {
           abortControllerRef.current.abort()
         }
       }
-    }, 90000)
+    }, 60000)
 
     return () => {
       clearTimeout(retryTimeoutId)
