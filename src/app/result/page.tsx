@@ -165,7 +165,7 @@ export default function ResultPage() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[42vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-auto max-h-[48vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
@@ -204,7 +204,7 @@ export default function ResultPage() {
       {/* Bottom section */}
       {showContent && (
         <div
-          className="relative z-10 p-4 md:p-5 pb-6 rounded-t-3xl slide-up shrink-0 mt-auto backdrop-blur-sm"
+          className="relative z-10 pt-3 px-4 md:px-5 pb-6 rounded-t-3xl slide-up shrink-0 mt-auto backdrop-blur-sm"
           style={{
             paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
             backgroundColor: 'rgba(0,0,0,0.4)',
