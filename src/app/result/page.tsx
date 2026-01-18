@@ -165,7 +165,7 @@ export default function ResultPage() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[48vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-auto max-h-[40vh] sm:max-h-[48vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
