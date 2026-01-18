@@ -44,12 +44,6 @@ export default function ResultPage() {
   const downloadUrl = r2Url || qrUrl || resultImageUrl || ''
 
   useEffect(() => {
-    // Debug logging
-    console.log('[Result] Page loaded with:')
-    console.log('  resultImageUrl:', resultImageUrl)
-    console.log('  r2Path:', r2Path)
-    console.log('  displayImageUrl:', displayImageUrl)
-
     // If no result image and no photo, redirect to start
     if (!resultImageUrl && !photoData) {
       router.push('/')
@@ -59,7 +53,7 @@ export default function ResultPage() {
     // Show content after a delay
     const timer = setTimeout(() => setShowContent(true), 500)
     return () => clearTimeout(timer)
-  }, [resultImageUrl, photoData, router, r2Path, displayImageUrl])
+  }, [resultImageUrl, photoData, router])
 
   // Upload to R2 in background when page loads
   useEffect(() => {
@@ -68,7 +62,6 @@ export default function ResultPage() {
     const uploadToR2 = async () => {
       setUploadingToR2(true)
       try {
-        console.log('[Result] Starting R2 upload...')
         const response = await fetch(`${WORKER_URL}/upload-to-r2`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,14 +74,11 @@ export default function ResultPage() {
 
         if (response.ok) {
           const data = await response.json()
-          console.log('[Result] R2 upload complete:', data.r2Url)
           setR2Url(data.r2Url)
-          setQrUrl(data.r2Url) // Update context for consistency
-        } else {
-          console.error('[Result] R2 upload failed:', await response.text())
+          setQrUrl(data.r2Url)
         }
-      } catch (err) {
-        console.error('[Result] R2 upload error:', err)
+      } catch {
+        // Silently fail - FAL.ai URL still works for display
       } finally {
         setUploadingToR2(false)
       }
@@ -216,15 +206,8 @@ export default function ResultPage() {
                   className={`w-full h-auto max-h-[40vh] sm:max-h-[48vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
-                  onLoad={() => {
-                    console.log('[Result] Image loaded successfully from:', displayImageUrl)
-                    setImageLoaded(true)
-                  }}
-                  onError={(e) => {
-                    console.error('[Result] Image FAILED to load from:', displayImageUrl)
-                    // Show the image anyway (might be partially loaded or show broken state)
-                    setImageLoaded(true)
-                  }}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageLoaded(true)}
                 />
                 {!imageLoaded && (
                   <div className="absolute inset-0 bg-white/5 flex items-center justify-center">

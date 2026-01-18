@@ -18,7 +18,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
       ref={setRef}
       onClick={onClick}
       style={equalHeight ? { height: `${equalHeight}px` } : undefined}
-      className={`py-[clamp(0.75rem,2vh,1.5rem)] px-[clamp(1rem,2vw,1.5rem)] rounded-2xl backdrop-blur-md border transition-all duration-300 ${
+      className={`py-[clamp(0.875rem,2.5vh,2rem)] px-[clamp(1.25rem,3vw,2.5rem)] rounded-2xl backdrop-blur-md border transition-all duration-300 ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
@@ -26,14 +26,14 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
           : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
     >
-      <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-[clamp(0.375rem,1vh,0.625rem)] ${
+      <span className={`inline-block px-2.5 py-1 rounded text-xs lg:text-sm font-bold mb-[clamp(0.5rem,1.25vh,0.875rem)] ${
         selected
           ? 'bg-[#1e3a5f] text-white'
           : 'bg-white/20 text-white/80'
       }`}>
         {label}
       </span>
-      <span className="font-medium text-sm md:text-base leading-snug block">{text}</span>
+      <span className="font-medium text-sm md:text-base lg:text-lg leading-snug block">{text}</span>
     </button>
   )
 }
@@ -193,10 +193,10 @@ export default function QuestionCard({
         <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12 min-h-0">
           <div
             ref={gridRef}
-            className={`grid w-full gap-[clamp(0.5rem,1.5vh,1.5rem)] ${
+            className={`grid w-full gap-[clamp(0.625rem,1.5vh,1.25rem)] ${
               options.length === 3
-                ? 'grid-cols-1 max-w-lg'
-                : 'grid-cols-2 max-w-xl lg:max-w-3xl'
+                ? 'grid-cols-1 max-w-xl lg:max-w-2xl'
+                : 'grid-cols-2 max-w-2xl lg:max-w-4xl'
             }`}
           >
             {options.map((option, index) => (
