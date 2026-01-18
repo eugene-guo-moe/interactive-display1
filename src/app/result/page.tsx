@@ -111,7 +111,7 @@ export default function ResultPage() {
       </p>
 
       {/* Header */}
-      <div className="relative z-10 px-4 md:px-5 pb-2 text-center shrink-0">
+      <div className="relative z-10 px-4 md:px-5 pt-2 pb-4 sm:pb-2 text-center shrink-0">
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
