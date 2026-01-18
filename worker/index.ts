@@ -49,159 +49,6 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer
 }
 
-// Get segmentation mask using FAL.ai BiRefNet (for inpainting approach)
-// Returns both the cutout image URL and the mask image URL
-async function getSegmentationMask(
-  imageUrl: string,
-  apiKey: string
-): Promise<{ cutoutUrl: string; maskUrl: string }> {
-  const response = await fetch('https://fal.run/fal-ai/birefnet/v2', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      image_url: imageUrl,
-      model: 'General Use (Light)',
-      operating_resolution: '1024x1024',
-      output_mask: true, // Get the segmentation mask
-      output_format: 'png',
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`BiRefNet segmentation error: ${error}`)
-  }
-
-  const result = await response.json() as {
-    image: { url: string }
-    mask_image?: { url: string }
-  }
-
-  if (!result.image?.url) {
-    throw new Error('No segmentation result')
-  }
-
-  // BiRefNet mask: white = foreground (person), black = background
-  // Flux Fill needs: white = areas to fill, black = areas to preserve
-  // So we need to invert the mask - we'll do this with image editing
-  const maskUrl = result.mask_image?.url || result.image.url
-
-  return {
-    cutoutUrl: result.image.url,
-    maskUrl: maskUrl,
-  }
-}
-
-// Invert mask colors using FAL.ai image editing
-async function invertMaskImage(
-  maskUrl: string,
-  apiKey: string
-): Promise<string> {
-  // Use Flux Pro Fill with a simple inversion prompt on the mask itself
-  // Or we can just negate by re-uploading and using image manipulation
-  // For now, let's try using the mask as-is first and see if Flux Fill interprets it correctly
-  // If not, we can add an inversion step using canvas or another service
-
-  // Actually, let's try a workaround: Flux Fill documentation says
-  // "white = areas to fill" - our mask has white = person
-  // So we need the inverse. Let's fetch the mask, manipulate it, and re-upload
-
-  // For now, return as-is and we'll test if Flux Fill works with this orientation
-  return maskUrl
-}
-
-// Inpaint background using FAL.ai Fooocus (supports invert_mask)
-async function inpaintBackground(
-  imageUrl: string,
-  maskUrl: string,
-  prompt: string,
-  apiKey: string
-): Promise<string> {
-  // Using Fooocus because it has invert_mask option
-  // BiRefNet mask: white = person, black = background
-  // With invert_mask=true: it will fill the BLACK areas (background) instead of white
-  const response = await fetch('https://fal.run/fal-ai/fooocus/inpaint', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt: prompt,
-      inpaint_image_url: imageUrl,
-      mask_image_url: maskUrl,
-      invert_mask: true, // Invert the mask so we fill the background, not the person
-      negative_prompt: 'blurry, low quality, distorted face, extra limbs, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
-      guidance_scale: 7,
-      sharpness: 2,
-      output_format: 'jpeg',
-      num_images: 1,
-      performance: 'Quality',
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`FAL.ai Fooocus error: ${error}`)
-  }
-
-  const result = await response.json() as {
-    images: Array<{ url: string }>
-  }
-
-  if (!result.images || result.images.length === 0) {
-    throw new Error('No inpainted image generated')
-  }
-
-  return result.images[0].url
-}
-
-// Generate scene with a person using FAL.ai Flux
-async function generateSceneWithPerson(
-  prompt: string,
-  timePeriod: 'past' | 'present' | 'future',
-  gender: 'male' | 'female',
-  apiKey: string
-): Promise<string> {
-  // Use gender-specific terms with appropriate, modest descriptions
-  const personTerm = gender === 'female'
-    ? 'A modestly dressed woman wearing casual appropriate clothing'
-    : 'A man wearing casual appropriate clothing'
-
-  const response = await fetch('https://fal.run/fal-ai/flux-pro/v1.1', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt: `${prompt} with ${personTerm.toLowerCase()} in the foreground looking directly at the viewer, front-facing portrait from waist up, face clearly visible, making eye contact with camera, seamlessly blended into the environment, consistent lighting, neutral pleasant expression, flattering portrait lighting, photorealistic, family-friendly, appropriate for all ages. Person is wearing complete, modest, school-appropriate clothing with fully covered torso.`,
-      negative_prompt: 'bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
-      image_size: 'portrait_16_9', // 9:16 ratio to fill phone screens
-      num_images: 1,
-      safety_tolerance: 1, // Strictest safety setting
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`FAL.ai Flux error: ${error}`)
-  }
-
-  const result = await response.json() as {
-    images: Array<{ url: string }>
-  }
-
-  if (!result.images || result.images.length === 0) {
-    throw new Error('No scene generated')
-  }
-
-  return result.images[0].url
-}
-
 // Outpaint the top of an image to extend it for fullscreen phones
 // Uses FAL.ai's creative upscaler with uncrop mode to seamlessly extend the scene upward
 async function outpaintTop(
@@ -256,9 +103,8 @@ async function outpaintTop(
   return outputUrl
 }
 
-// Generate image with face embedded using IP-Adapter Face ID
-// This embeds the face INTO the generation process for better identity preservation (~70-75% match)
-// compared to face-swap which only achieves ~20-30% match
+// Generate image with face using PuLID FLUX for better identity preservation (~91% accuracy)
+// PuLID provides superior face preservation compared to IP-Adapter Face ID (~70-75%)
 async function generateWithFaceId(
   faceImageUrl: string,
   prompt: string,
@@ -271,9 +117,12 @@ async function generateWithFaceId(
     ? 'a woman'
     : 'a man'
 
-  const fullPrompt = `${prompt} featuring ${personTerm} wearing complete, modest, school-appropriate clothing with fully covered torso in the foreground, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly`
+  const fullPrompt = `${prompt} featuring ${personTerm} wearing complete, modest, school-appropriate clothing with fully covered torso, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly, appropriate for all ages`
 
-  const response = await fetch('https://fal.run/fal-ai/ip-adapter-face-id', {
+  console.log('[PULID] Generating with prompt:', fullPrompt.substring(0, 100) + '...')
+  console.log('[PULID] Reference image:', faceImageUrl)
+
+  const response = await fetch('https://fal.run/fal-ai/flux-pulid', {
     method: 'POST',
     headers: {
       'Authorization': `Key ${apiKey}`,
@@ -281,20 +130,23 @@ async function generateWithFaceId(
     },
     body: JSON.stringify({
       prompt: fullPrompt,
-      face_image_url: faceImageUrl,
+      reference_image_url: faceImageUrl,
       negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
-      num_inference_steps: 30,
-      guidance_scale: 7.5,
-      model_type: 'SDXL-v2-plus', // Use SDXL for better quality
-      width: 576,  // 9:16 aspect ratio for phones
-      height: 1024,
-      num_samples: 1,
+      num_inference_steps: 20,
+      guidance_scale: 4,
+      id_weight: 1.0, // Maximum identity preservation
+      image_size: {
+        width: 576,   // 9:16 aspect ratio for phones
+        height: 1024,
+      },
+      enable_safety_checker: true,
     }),
   })
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`FAL.ai IP-Adapter Face ID error: ${error}`)
+    console.error('[PULID] API error:', error)
+    throw new Error(`FAL.ai PuLID FLUX error: ${error}`)
   }
 
   const result = await response.json() as {
@@ -302,102 +154,23 @@ async function generateWithFaceId(
     images?: Array<{ url: string; file_size?: number }>
   }
 
+  console.log('[PULID] Raw response keys:', Object.keys(result))
+
   // Handle both response formats (image or images array)
   const outputUrl = result.image?.url || result.images?.[0]?.url
 
   if (!outputUrl) {
-    throw new Error('No image generated with Face ID')
+    console.log('[PULID] No URL found in response:', JSON.stringify(result))
+    throw new Error('No image generated with PuLID')
   }
 
   const fileSize = result.image?.file_size || result.images?.[0]?.file_size
   if (fileSize) {
-    console.log(`[FACE-ID] Output file size: ${(fileSize / 1024).toFixed(1)} KB`)
+    console.log(`[PULID] Output file size: ${(fileSize / 1024).toFixed(1)} KB`)
   }
 
+  console.log('[PULID] Generated image:', outputUrl)
   return outputUrl
-}
-
-// Legacy: Swap face using FAL.ai Advanced Face Swap (kept for fallback)
-// This uses easel-ai/advanced-face-swap which supports gender and upscale options
-async function swapFace(
-  targetImageUrl: string,
-  faceImageUrl: string,
-  gender: 'male' | 'female',
-  apiKey: string
-): Promise<string> {
-  // Use advanced-face-swap with upscale disabled for faster downloads
-  const response = await fetch('https://fal.run/easel-ai/advanced-face-swap', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      face_image_0: faceImageUrl,
-      gender_0: gender,
-      target_image: targetImageUrl,
-      workflow_type: 'target_hair', // Keep target's hair (generated scene)
-      upscale: false, // Disable 2x upscale for faster downloads
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`FAL.ai advanced-face-swap error: ${error}`)
-  }
-
-  const result = await response.json() as {
-    image: { url: string; file_size?: number }
-  }
-
-  if (!result.image || !result.image.url) {
-    throw new Error('No face-swapped image generated')
-  }
-
-  if (result.image.file_size) {
-    console.log(`[FACE-SWAP] Output file size: ${(result.image.file_size / 1024).toFixed(1)} KB`)
-  }
-
-  return result.image.url
-}
-
-// Enhance face for females (professional retouching - smoother skin, subtle improvements)
-async function enhanceFace(
-  imageUrl: string,
-  apiKey: string
-): Promise<string> {
-  try {
-    const response = await fetch('https://fal.run/fal-ai/image-editing/face-enhancement', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Key ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        image_url: imageUrl,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Face enhancement failed:', errorText)
-      return imageUrl
-    }
-
-    const result = await response.json() as {
-      image?: { url: string }
-    }
-
-    if (result.image?.url) {
-      return result.image.url
-    }
-
-    console.error('No enhanced image in response, using original')
-    return imageUrl
-  } catch (error) {
-    console.error('Face enhancement error:', error)
-    return imageUrl // Fallback to original if enhancement fails
-  }
 }
 
 // Fetch image from URL with size logging
@@ -412,26 +185,6 @@ async function fetchImage(url: string): Promise<ArrayBuffer> {
   const buffer = await response.arrayBuffer()
   console.log(`[FETCH] Downloaded: ${(buffer.byteLength / 1024).toFixed(1)} KB`)
   return buffer
-}
-
-// Simple image compositing using canvas-like approach
-// Note: For production, consider using a proper image processing library
-// This creates a simple HTML canvas composite via a service
-async function compositeImages(
-  backgroundUrl: string,
-  foregroundPng: ArrayBuffer
-): Promise<ArrayBuffer> {
-  // For simplicity, we'll return the background with a note
-  // In production, use a proper compositing service or library
-
-  // Option 1: Use Cloudflare Image Resizing with overlays
-  // Option 2: Use a separate compositing microservice
-  // Option 3: Return both images and composite client-side
-
-  // For now, fetch and return the background as placeholder
-  // The frontend can handle compositing if needed
-  const bgResponse = await fetch(backgroundUrl)
-  return bgResponse.arrayBuffer()
 }
 
 // Generate a unique ID
@@ -568,32 +321,6 @@ export default {
       }
     }
 
-    // Test FAL.ai endpoint (for debugging)
-    if (url.pathname === '/test-fal' && request.method === 'POST') {
-      try {
-        const body = await request.json() as { prompt?: string }
-        const prompt = body.prompt || 'A beautiful Singapore kampung village scene'
-
-        const sceneImageUrl = await generateScene(prompt, env.FAL_KEY)
-
-        return new Response(JSON.stringify({
-          success: true,
-          imageUrl: sceneImageUrl,
-          prompt
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      } catch (error) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-    }
-
     // Image generation endpoint
     if (url.pathname === '/generate' && request.method === 'POST') {
       try {
@@ -634,19 +361,18 @@ export default {
         timings['1_2_upload_and_gender'] = Date.now() - stepStart
         console.log(`[TIMING] Steps 1+2 - Upload to R2 + Gender detection (parallel): ${timings['1_2_upload_and_gender']}ms - Gender: ${detectedGender}`)
 
-        // Step 3: Generate image with face embedded using IP-Adapter Face ID
-        // This replaces the old 2-step approach (generate scene + face swap)
-        // IP-Adapter embeds the face INTO the generation for better identity preservation (~70-75% vs ~20-30%)
+        // Step 3: Generate image with face embedded using PuLID FLUX
+        // PuLID achieves ~91% face recognition accuracy vs IP-Adapter's ~70-75%
         stepStart = Date.now()
         const generatedImageUrl = await generateWithFaceId(userPhotoUrl, prompt, timePeriod, detectedGender, env.FAL_KEY)
-        timings['3_face_id_generation'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 3 - IP-Adapter Face ID generation: ${timings['3_face_id_generation']}ms`)
+        timings['3_pulid_generation'] = Date.now() - stepStart
+        console.log(`[TIMING] Step 3 - PuLID FLUX generation: ${timings['3_pulid_generation']}ms`)
 
-        // Step 4: Outpaint top of image for fullscreen phone display
-        stepStart = Date.now()
-        const outpaintedImageUrl = await outpaintTop(generatedImageUrl, prompt, env.FAL_KEY)
-        timings['4_outpaint_top'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 4 - Outpaint top: ${timings['4_outpaint_top']}ms`)
+        // Step 4: Skip outpaint for now - it was distorting the face
+        // TODO: Find a better outpainting solution that preserves the face
+        // const outpaintedImageUrl = await outpaintTop(generatedImageUrl, prompt, env.FAL_KEY)
+        const outpaintedImageUrl = generatedImageUrl
+        console.log(`[TIMING] Step 4 - Outpaint skipped (using PuLID output directly)`)
 
         // Fetch and store the final image
         stepStart = Date.now()
@@ -690,97 +416,6 @@ export default {
         return new Response(
           JSON.stringify({
             error: 'Image generation failed',
-            details: error instanceof Error ? error.message : 'Unknown error',
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        )
-      }
-    }
-
-    // NEW: Inpainting-based generation endpoint (v2)
-    // Pipeline: User photo → Remove BG mask → Invert → Flux Fill → Result
-    // Benefits: Preserves user's actual appearance (face, body, hair, clothes)
-    if (url.pathname === '/generate-v2' && request.method === 'POST') {
-      try {
-        const body: GenerateRequest = await request.json()
-        const { photo, prompt, timePeriod } = body
-
-        if (!photo || !prompt) {
-          return new Response(
-            JSON.stringify({ error: 'Missing required fields' }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
-          )
-        }
-
-        const imageId = generateId()
-        const photoBase64 = extractBase64(photo)
-
-        // Step 1: Upload user's original photo to R2
-        const userPhotoPath = `uploads/${imageId}-original.jpg`
-        const photoBuffer = base64ToArrayBuffer(photoBase64)
-        await env.IMAGES_BUCKET.put(userPhotoPath, photoBuffer, {
-          httpMetadata: { contentType: 'image/jpeg' },
-        })
-        const userPhotoUrl = `${env.PUBLIC_URL}/${userPhotoPath}`
-        console.log('V2: Uploaded user photo:', userPhotoUrl)
-
-        // Step 2: Get segmentation mask using BiRefNet
-        // BiRefNet returns: white = person (foreground), black = background
-        const { cutoutUrl, maskUrl: rawMaskUrl } = await getSegmentationMask(userPhotoUrl, env.FAL_KEY)
-        console.log('V2: Got segmentation - cutout:', cutoutUrl, 'mask:', rawMaskUrl)
-
-        // Step 3: For Flux Fill, we need: white = areas to FILL (background), black = areas to KEEP (person)
-        // BiRefNet mask has it inverted (white = person), so we'll try as-is first
-        // Note: If results are wrong, we may need to add mask inversion step
-        const maskUrl = rawMaskUrl
-        console.log('V2: Using mask URL:', maskUrl)
-
-        // Step 4: Use Flux Pro Fill to inpaint the background
-        const inpaintedUrl = await inpaintBackground(
-          userPhotoUrl,
-          maskUrl,
-          `${prompt} The person is naturally integrated into this scene with consistent lighting and perspective.`,
-          env.FAL_KEY
-        )
-        console.log('V2: Inpainted image:', inpaintedUrl)
-
-        // Step 5: Fetch and store the final image
-        const finalImage = await fetchImage(inpaintedUrl)
-        const imagePath = `generated/${timePeriod}/${imageId}.jpg`
-        await env.IMAGES_BUCKET.put(imagePath, finalImage, {
-          httpMetadata: {
-            contentType: 'image/jpeg',
-          },
-          customMetadata: {
-            prompt,
-            timePeriod,
-            method: 'inpainting-v2',
-            createdAt: new Date().toISOString(),
-          },
-        })
-
-        // Generate public URL
-        const publicUrl = `${env.PUBLIC_URL}/${imagePath}`
-
-        const response: GenerateResponse = {
-          imageUrl: publicUrl,
-          qrUrl: publicUrl,
-        }
-
-        return new Response(JSON.stringify(response), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      } catch (error) {
-        console.error('V2 Generation error:', error)
-        return new Response(
-          JSON.stringify({
-            error: 'Image generation failed (v2)',
             details: error instanceof Error ? error.message : 'Unknown error',
           }),
           {

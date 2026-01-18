@@ -162,12 +162,12 @@ export const triviaQuestions: TriviaQuestion[] = [
   },
   {
     id: 15,
-    question: 'By what year does Singapore aim to be a Smart Nation?',
+    question: 'In what year was Singapore\'s Smart Nation initiative launched?',
     options: [
-      { label: 'A', text: '2025' },
-      { label: 'B', text: '2030' },
-      { label: 'C', text: '2035' },
-      { label: 'D', text: '2040' },
+      { label: 'A', text: '2010' },
+      { label: 'B', text: '2014' },
+      { label: 'C', text: '2018' },
+      { label: 'D', text: '2020' },
     ],
     correctAnswer: 'B',
   },
