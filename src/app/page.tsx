@@ -144,13 +144,13 @@ export default function WelcomePage() {
         Begin Your Journey
       </button>
 
-      {/* School indicator - lower on mobile */}
-      <p className="absolute top-16 sm:top-8 left-1/2 -translate-x-1/2 text-white/40 text-xs sm:text-sm tracking-widest z-20 text-center px-4">
+      {/* School indicator */}
+      <p className="absolute top-6 sm:top-8 left-1/2 -translate-x-1/2 text-white/40 text-xs sm:text-sm tracking-widest z-20 text-center px-4">
         RIVERSIDE SECONDARY SCHOOL, SINGAPORE
       </p>
 
       {/* Time badge - left on mobile, moves to right with AI on desktop */}
-      <div className="absolute top-16 sm:top-8 left-6 sm:left-auto sm:right-8 flex items-center gap-1.5 text-white/30 text-xs z-20">
+      <div className="absolute top-6 sm:top-8 left-6 sm:left-auto sm:right-8 flex items-center gap-1.5 text-white/30 text-xs z-20">
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -165,7 +165,7 @@ export default function WelcomePage() {
       </div>
 
       {/* AI badge - right on mobile only */}
-      <div className="absolute top-16 right-6 flex sm:hidden items-center gap-1.5 text-white/30 text-xs z-20">
+      <div className="absolute top-6 right-6 flex sm:hidden items-center gap-1.5 text-white/30 text-xs z-20">
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
         </svg>
