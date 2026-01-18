@@ -18,7 +18,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
       ref={setRef}
       onClick={onClick}
       style={equalHeight ? { height: `${equalHeight}px` } : undefined}
-      className={`py-[3vh] md:py-[2.5vh] lg:py-[2vh] px-[4vw] md:px-[3vw] lg:px-[2vw] min-h-[12vh] md:min-h-[10vh] rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col justify-center ${
+      className={`py-[min(3vh,2vw)] px-[min(4vw,3vh)] min-h-[max(10vh,60px)] landscape:min-h-[max(15vw,50px)] rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col justify-center ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
@@ -26,14 +26,14 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
           : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
     >
-      <span className={`inline-block px-2.5 py-1 rounded text-[clamp(0.7rem,1.5vw,0.875rem)] font-bold mb-[1vh] ${
+      <span className={`inline-block px-2.5 py-1 rounded text-[clamp(0.7rem,1.2vmax,0.875rem)] font-bold mb-[min(1vh,0.5rem)] ${
         selected
           ? 'bg-[#1e3a5f] text-white'
           : 'bg-white/20 text-white/80'
       }`}>
         {label}
       </span>
-      <span className="font-medium text-[clamp(0.95rem,2vw,1.25rem)] leading-snug block">{text}</span>
+      <span className="font-medium text-[clamp(0.95rem,1.8vmax,1.25rem)] leading-snug block">{text}</span>
     </button>
   )
 }
@@ -180,8 +180,8 @@ export default function QuestionCard({
         </div>
 
         {/* Question section with typewriter */}
-        <div className="mb-[2vh] text-center px-4 flex-shrink-0">
-          <h2 className="font-display text-[clamp(1.25rem,3.5vw,2rem)] font-semibold text-white leading-relaxed max-w-[90vw] md:max-w-[80vw] lg:max-w-2xl mx-auto drop-shadow-lg">
+        <div className="mb-[min(2vh,1.5vw)] text-center px-4 flex-shrink-0">
+          <h2 className="font-display text-[clamp(1.25rem,2.5vmax,2rem)] font-semibold text-white leading-relaxed max-w-[90vw] md:max-w-[80vw] lg:max-w-2xl landscape:max-w-[70vw] mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (
               <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
@@ -193,10 +193,10 @@ export default function QuestionCard({
         <div className="flex-1 flex items-center justify-center px-[3vw] min-h-0">
           <div
             ref={gridRef}
-            className={`grid w-full gap-[1.5vh] md:gap-[2vh] ${
+            className={`grid w-full gap-[min(1.5vh,1vw)] ${
               options.length === 3
-                ? 'grid-cols-1 max-w-[85vw] md:max-w-[70vw] lg:max-w-[50vw]'
-                : 'grid-cols-2 max-w-[92vw] md:max-w-[85vw] lg:max-w-[70vw]'
+                ? 'grid-cols-1 max-w-[85vw] md:max-w-[70vw] lg:max-w-[50vw] landscape:max-w-[50vw] landscape:md:max-w-[45vw]'
+                : 'grid-cols-2 max-w-[92vw] md:max-w-[85vw] lg:max-w-[70vw] landscape:max-w-[70vw] landscape:md:max-w-[60vw]'
             }`}
           >
             {options.map((option, index) => (
