@@ -26,7 +26,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
           : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
     >
-      <span className={`inline-block px-2.5 py-1 rounded text-[clamp(0.7rem,1.2vmax,0.875rem)] font-bold mb-[min(1vh,0.5rem)] ${
+      <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold mb-2 ${
         selected
           ? 'bg-[#1e3a5f] text-white'
           : 'bg-white/20 text-white/80'
