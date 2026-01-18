@@ -249,12 +249,15 @@ async function generateWithFaceId(
     throw new Error('No request_id returned from FAL.ai queue')
   }
 
-  // Step 2: Poll for completion (max 75 seconds with 2s intervals)
-  const maxPolls = 38 // 38 * 2s = 76s max
-  const pollInterval = 2000
+  // Step 2: Poll for completion (max 75 seconds with 1s intervals)
+  const maxPolls = 75
+  const pollInterval = 1000
 
   for (let i = 0; i < maxPolls; i++) {
-    await new Promise(resolve => setTimeout(resolve, pollInterval))
+    // Wait before polling (skip first iteration for faster initial check)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+    }
 
     const statusResponse = await fetch(
       `https://queue.fal.run/fal-ai/flux-pulid/requests/${request_id}/status`,
