@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState, useEffect, useRef } from 'react'
+import { ReactNode, useState, useEffect, useLayoutEffect, useRef } from 'react'
 
 interface OptionProps {
   label: string
@@ -89,72 +89,52 @@ export default function QuestionCard({
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
   const gridRef = useRef<HTMLDivElement | null>(null)
 
-  // Calculate equal height for all options
-  useEffect(() => {
-    // Reset height when question changes
+  // Measure and set equal heights immediately on mount (before options animate in)
+  const measureHeights = () => {
+    const grid = gridRef.current
+    if (!grid) return
+
+    // Temporarily set grid to not stretch items so we can measure natural heights
+    grid.style.alignItems = 'start'
+
+    // Force a reflow to apply the style
+    grid.offsetHeight
+
+    const heights = optionRefs.current
+      .filter(ref => ref !== null)
+      .map(ref => ref!.offsetHeight)
+
+    if (heights.length === options.length && heights.length > 0) {
+      const maxHeight = Math.max(...heights)
+      setEqualHeight(maxHeight)
+    }
+
+    // Restore grid alignment
+    grid.style.alignItems = ''
+  }
+
+  // Use useLayoutEffect to measure before browser paints
+  useLayoutEffect(() => {
     setEqualHeight(null)
     optionRefs.current = []
-  }, [questionNumber])
 
+    // Small delay to ensure refs are set after render
+    const timer = setTimeout(measureHeights, 10)
+    return () => clearTimeout(timer)
+  }, [questionNumber, options.length])
+
+  // Handle resize
   useEffect(() => {
-    const measureAndSetHeight = () => {
-      const grid = gridRef.current
-      if (!grid) return
-
-      // First, reset heights and set grid to not stretch items
+    const handleResize = () => {
       setEqualHeight(null)
-      grid.style.alignItems = 'start'
-
-      // Use double rAF to ensure DOM has painted with natural heights
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const heights = optionRefs.current
-            .filter(ref => ref !== null)
-            .map(ref => ref!.offsetHeight)
-          if (heights.length > 0) {
-            const maxHeight = Math.max(...heights)
-            setEqualHeight(maxHeight)
-          }
-          // Restore grid alignment
-          grid.style.alignItems = ''
-        })
+        measureHeights()
       })
     }
 
-    // Wait until all options are visible, then measure
-    if (showOptions.length === options.length) {
-      // Extra delay to ensure animations have started and elements are measurable
-      const timer = setTimeout(measureAndSetHeight, 100)
-
-      // Also handle resize
-      const handleResize = () => {
-        const grid = gridRef.current
-        if (!grid) return
-
-        setEqualHeight(null)
-        grid.style.alignItems = 'start'
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const heights = optionRefs.current
-              .filter(ref => ref !== null)
-              .map(ref => ref!.offsetHeight)
-            if (heights.length > 0) {
-              const maxHeight = Math.max(...heights)
-              setEqualHeight(maxHeight)
-            }
-            grid.style.alignItems = ''
-          })
-        })
-      }
-
-      window.addEventListener('resize', handleResize)
-      return () => {
-        clearTimeout(timer)
-        window.removeEventListener('resize', handleResize)
-      }
-    }
-  }, [showOptions.length, options.length])
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [options.length])
 
   // Typewriter effect
   useEffect(() => {
