@@ -44,6 +44,12 @@ export default function ResultPage() {
   const downloadUrl = r2Url || qrUrl || resultImageUrl || ''
 
   useEffect(() => {
+    // Debug logging
+    console.log('[Result] Page loaded with:')
+    console.log('  resultImageUrl:', resultImageUrl)
+    console.log('  r2Path:', r2Path)
+    console.log('  displayImageUrl:', displayImageUrl)
+
     // If no result image and no photo, redirect to start
     if (!resultImageUrl && !photoData) {
       router.push('/')
@@ -53,7 +59,7 @@ export default function ResultPage() {
     // Show content after a delay
     const timer = setTimeout(() => setShowContent(true), 500)
     return () => clearTimeout(timer)
-  }, [resultImageUrl, photoData, router])
+  }, [resultImageUrl, photoData, router, r2Path, displayImageUrl])
 
   // Upload to R2 in background when page loads
   useEffect(() => {
@@ -210,7 +216,15 @@ export default function ResultPage() {
                   className={`w-full h-auto max-h-[40vh] sm:max-h-[48vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
-                  onLoad={() => setImageLoaded(true)}
+                  onLoad={() => {
+                    console.log('[Result] Image loaded successfully from:', displayImageUrl)
+                    setImageLoaded(true)
+                  }}
+                  onError={(e) => {
+                    console.error('[Result] Image FAILED to load from:', displayImageUrl)
+                    // Show the image anyway (might be partially loaded or show broken state)
+                    setImageLoaded(true)
+                  }}
                 />
                 {!imageLoaded && (
                   <div className="absolute inset-0 bg-white/5 flex items-center justify-center">
