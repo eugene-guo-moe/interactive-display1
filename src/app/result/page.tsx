@@ -131,7 +131,7 @@ export default function ResultPage() {
       </div>
 
       {/* Generated image */}
-      <div className="relative z-10 flex items-center justify-center px-3 py-2 shrink-0">
+      <div className="relative z-10 flex items-center justify-center px-3 shrink-0">
         <div className="relative w-[85vw] max-w-sm md:max-w-md">
           {/* Decorative frame corners */}
           <div
@@ -165,7 +165,7 @@ export default function ResultPage() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[55vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-auto max-h-[50vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
