@@ -173,15 +173,15 @@ export default function QuestionCard({
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col p-[clamp(0.75rem,2vh,1.5rem)] overflow-y-auto">
+      <div className="relative z-10 flex-1 flex flex-col p-4 md:p-6 overflow-y-auto">
         {/* Step indicator */}
-        <div className="mb-[clamp(0.5rem,1.5vh,1.5rem)] pt-2 flex-shrink-0">
+        <div className="mb-3 md:mb-4 pt-2 flex-shrink-0">
           <StepIndicator current={questionNumber} total={totalQuestions} />
         </div>
 
         {/* Question section with typewriter */}
-        <div className="mb-[clamp(0.5rem,1.5vh,1.5rem)] text-center px-4 flex-shrink-0">
-          <h2 className="font-display text-[clamp(1.125rem,2.5vh,1.875rem)] font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg">
+        <div className="mb-4 md:mb-6 text-center px-4 flex-shrink-0">
+          <h2 className="font-display text-xl md:text-2xl lg:text-3xl font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (
               <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
@@ -215,7 +215,7 @@ export default function QuestionCard({
         </div>
 
         {/* Navigation buttons */}
-        <div className={`mt-[clamp(0.5rem,1.5vh,1.5rem)] max-w-xl mx-auto w-full px-4 pb-[clamp(0.5rem,1vh,1rem)] flex-shrink-0 transition-all duration-300 ${
+        <div className={`mt-4 md:mt-6 max-w-xl mx-auto w-full px-4 pb-3 md:pb-4 flex-shrink-0 transition-all duration-300 ${
           showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}>
           {children}
