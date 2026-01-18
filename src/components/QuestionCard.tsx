@@ -18,7 +18,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
       ref={setRef}
       onClick={onClick}
       style={equalHeight ? { height: `${equalHeight}px` } : undefined}
-      className={`py-[min(3vh,2vw)] px-[min(4vw,3vh)] min-h-[max(10vh,60px)] landscape:min-h-[max(15vw,50px)] rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col justify-center ${
+      className={`py-4 px-5 rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col items-center justify-center ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
@@ -33,7 +33,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
       }`}>
         {label}
       </span>
-      <span className="font-medium text-[clamp(0.95rem,1.8vmax,1.25rem)] leading-snug block">{text}</span>
+      <span className="font-medium text-sm md:text-base leading-snug block text-center">{text}</span>
     </button>
   )
 }
@@ -173,15 +173,15 @@ export default function QuestionCard({
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col p-[2vh] md:p-[3vh] overflow-y-auto">
+      <div className="relative z-10 flex-1 flex flex-col p-4 md:p-6 overflow-y-auto">
         {/* Step indicator */}
-        <div className="mb-[1.5vh] pt-[1vh] flex-shrink-0">
+        <div className="mb-4 pt-2 flex-shrink-0">
           <StepIndicator current={questionNumber} total={totalQuestions} />
         </div>
 
         {/* Question section with typewriter */}
-        <div className="mb-[min(2vh,1.5vw)] text-center px-4 flex-shrink-0">
-          <h2 className="font-display text-[clamp(1.25rem,2.5vmax,2rem)] font-semibold text-white leading-relaxed max-w-[90vw] md:max-w-[80vw] lg:max-w-2xl landscape:max-w-[70vw] mx-auto drop-shadow-lg">
+        <div className="mb-4 md:mb-6 text-center px-4 flex-shrink-0">
+          <h2 className="font-display text-xl md:text-2xl lg:text-3xl font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (
               <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
@@ -190,13 +190,13 @@ export default function QuestionCard({
         </div>
 
         {/* Options - Dynamic layout based on count */}
-        <div className="flex-1 flex items-center justify-center px-[3vw] min-h-0">
+        <div className="flex-1 flex items-center justify-center px-4 md:px-8">
           <div
             ref={gridRef}
-            className={`grid w-full gap-[min(1.5vh,1vw)] ${
+            className={`grid w-full gap-3 ${
               options.length === 3
-                ? 'grid-cols-1 max-w-[85vw] md:max-w-[70vw] lg:max-w-[50vw] landscape:max-w-[50vw] landscape:md:max-w-[45vw]'
-                : 'grid-cols-2 max-w-[92vw] md:max-w-[85vw] lg:max-w-[70vw] landscape:max-w-[70vw] landscape:md:max-w-[60vw]'
+                ? 'grid-cols-1 max-w-md md:max-w-lg lg:max-w-xl'
+                : 'grid-cols-2 max-w-lg md:max-w-2xl lg:max-w-3xl'
             }`}
           >
             {options.map((option, index) => (
@@ -215,7 +215,7 @@ export default function QuestionCard({
         </div>
 
         {/* Navigation buttons */}
-        <div className={`mt-[2vh] max-w-[85vw] md:max-w-[70vw] lg:max-w-xl mx-auto w-full px-4 pb-[1.5vh] flex-shrink-0 transition-all duration-300 ${
+        <div className={`mt-4 md:mt-6 max-w-md md:max-w-lg lg:max-w-xl mx-auto w-full px-4 pb-4 flex-shrink-0 transition-all duration-300 ${
           showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}>
           {children}
