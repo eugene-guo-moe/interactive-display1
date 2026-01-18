@@ -443,7 +443,7 @@ function getSecurityHeaders(): Record<string, string> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     const corsHeaders = getCorsHeaders(request, env)
     const securityHeaders = getSecurityHeaders()
@@ -667,34 +667,56 @@ export default {
         ])
 
         const userPhotoUrl = `${env.PUBLIC_URL}/${userPhotoPath}`
+        timings['upload_and_detect'] = Date.now() - startTime
+        console.log(`[${imageId}] Upload + detect: ${timings['upload_and_detect']}ms`)
 
         // Step 3: Generate image with face embedded using PuLID FLUX
         // PuLID achieves ~91% face recognition accuracy vs IP-Adapter's ~70-75%
+        const falStartTime = Date.now()
         const generatedImageUrl = await generateWithFaceId(userPhotoUrl, prompt, timePeriod, faceAttributes, env.FAL_KEY)
+        timings['fal_generation'] = Date.now() - falStartTime
+        console.log(`[${imageId}] FAL.ai generation: ${timings['fal_generation']}ms`)
+        console.log(`[${imageId}] FAL.ai URL: ${generatedImageUrl}`)
 
-        // Step 4: Fetch and store the final image
-        // PuLID already outputs 576x1024 (9:16) which is phone fullscreen - no outpaint needed
-        const finalImage = await fetchImage(generatedImageUrl)
-
+        // Generate R2 path for permanent storage
         const imagePath = `generated/${timePeriod}/${imageId}.jpg`
-        await env.IMAGES_BUCKET.put(imagePath, finalImage, {
-          httpMetadata: {
-            contentType: 'image/jpeg',
-          },
-          customMetadata: {
-            timePeriod,
-            createdAt: new Date().toISOString(),
-            // Don't store prompt in metadata for privacy
-          },
-        })
-
-        // Generate public URL
         const publicUrl = `${env.PUBLIC_URL}/${imagePath}`
 
+        // Step 4: Upload to R2 in BACKGROUND using waitUntil
+        // This allows us to return the FAL.ai URL immediately for faster display
+        ctx.waitUntil(
+          (async () => {
+            try {
+              const fetchStartTime = Date.now()
+              const finalImage = await fetchImage(generatedImageUrl)
+              console.log(`[${imageId}] Fetch from FAL CDN: ${Date.now() - fetchStartTime}ms`)
+
+              const uploadStartTime = Date.now()
+              await env.IMAGES_BUCKET.put(imagePath, finalImage, {
+                httpMetadata: {
+                  contentType: 'image/jpeg',
+                },
+                customMetadata: {
+                  timePeriod,
+                  createdAt: new Date().toISOString(),
+                },
+              })
+              console.log(`[${imageId}] R2 upload: ${Date.now() - uploadStartTime}ms`)
+              console.log(`[${imageId}] Total background: ${Date.now() - falStartTime - timings['fal_generation']}ms`)
+            } catch (err) {
+              console.error(`[${imageId}] Background upload failed:`, err)
+            }
+          })()
+        )
+
+        // Return FAL.ai URL immediately for fast display
+        // QR code uses R2 URL (will be ready in a few seconds)
         const response: GenerateResponse = {
-          imageUrl: publicUrl,
-          qrUrl: publicUrl,
+          imageUrl: generatedImageUrl, // FAL.ai URL - fast, temporary
+          qrUrl: publicUrl,            // R2 URL - permanent, for QR code
         }
+
+        console.log(`[${imageId}] Total response time: ${Date.now() - startTime}ms`)
 
         return new Response(JSON.stringify(response), {
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
