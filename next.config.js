@@ -56,8 +56,8 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' https://images.unsplash.com https://riversidesec.eugene-ff3.workers.dev data: blob:",
+              "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
+              "img-src 'self' https://images.unsplash.com https://riversidesec.eugene-ff3.workers.dev https://*.fal.media https://fal.media data: blob:",
               "connect-src 'self' https://riversidesec.eugene-ff3.workers.dev",
               "media-src 'self' blob:",
               "object-src 'none'",
