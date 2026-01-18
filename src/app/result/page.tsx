@@ -112,25 +112,6 @@ export default function ResultPage() {
 
       {/* Header */}
       <div className="relative z-10 p-4 md:p-5 pt-2 text-center shrink-0">
-        {/* Status indicator */}
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-4"
-          style={{
-            borderColor: `${currentPhase.color}30`,
-            backgroundColor: `${currentPhase.color}10`
-          }}
-        >
-          <div
-            className="w-1.5 h-1.5 rounded-full animate-pulse"
-            style={{ backgroundColor: currentPhase.color }}
-          />
-          <span
-            className="text-xs font-medium tracking-wider uppercase"
-            style={{ color: `${currentPhase.color}B0` }}
-          >
-            Complete
-          </span>
-        </div>
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
