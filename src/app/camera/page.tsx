@@ -169,7 +169,7 @@ export default function CameraPage() {
             {capturedPhoto ? 'Looking good!' : 'Strike a pose'}
           </h1>
           <p className="text-white/50 text-sm">
-            {capturedPhoto ? 'Happy with this photo?' : 'Position yourself in the frame'}
+            {capturedPhoto ? 'Happy with this photo?' : 'Solo photo works best'}
           </p>
         </div>
       </div>
