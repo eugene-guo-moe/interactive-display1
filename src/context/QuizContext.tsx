@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import type { QuizAnswers } from '@/types/quiz'
 
 export type { QuizAnswers }
@@ -18,7 +18,6 @@ interface QuizContextType {
   getTimePeriod: () => 'past' | 'present' | 'future'
   generationMethod: GenerationMethod
   setGenerationMethod: (method: GenerationMethod) => void
-  isHydrated: boolean
 }
 
 const initialAnswers: QuizAnswers = {
@@ -27,8 +26,6 @@ const initialAnswers: QuizAnswers = {
   q3: null,
 }
 
-const STORAGE_KEY = 'quiz-answers'
-
 const QuizContext = createContext<QuizContextType | undefined>(undefined)
 
 export function QuizProvider({ children }: { children: ReactNode }) {
@@ -36,43 +33,15 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [photoData, setPhotoData] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [generationMethod, setGenerationMethod] = useState<GenerationMethod>('v1')
-  const [isHydrated, setIsHydrated] = useState(false)
-
-  // Hydrate from sessionStorage on mount
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setAnswers(parsed)
-      }
-    } catch (e) {
-      // Ignore storage errors
-    }
-    setIsHydrated(true)
-  }, [])
 
   const setAnswer = useCallback((question: keyof QuizAnswers, answer: string) => {
-    setAnswers(prev => {
-      const newAnswers = { ...prev, [question]: answer }
-      try {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newAnswers))
-      } catch (e) {
-        // Ignore storage errors
-      }
-      return newAnswers
-    })
+    setAnswers(prev => ({ ...prev, [question]: answer }))
   }, [])
 
   const resetQuiz = useCallback(() => {
     setAnswers(initialAnswers)
     setPhotoData(null)
     setResultImageUrl(null)
-    try {
-      sessionStorage.removeItem(STORAGE_KEY)
-    } catch (e) {
-      // Ignore storage errors
-    }
   }, [])
 
   const getTimePeriod = useCallback((): 'past' | 'present' | 'future' => {
@@ -92,7 +61,6 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         getTimePeriod,
         generationMethod,
         setGenerationMethod,
-        isHydrated,
       }}
     >
       {children}

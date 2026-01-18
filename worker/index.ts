@@ -251,7 +251,7 @@ async function generateSceneWithPerson(
 }
 
 // Extend image vertically using outpainting to fill phone screen
-// Does 2 passes: 2x top only - avoids generating feet/legs which can look odd
+// Does 3 passes: 3x top only - creates taller image closer to phone aspect ratio
 async function extendImageVertically(
   imageUrl: string,
   prompt: string,
@@ -261,7 +261,7 @@ async function extendImageVertically(
   let currentUrl = imageUrl
 
   // First pass: extend top
-  console.log('[OUTPAINT] Pass 1/2: Extending top...')
+  console.log('[OUTPAINT] Pass 1/3: Extending top...')
   const top1Response = await fetch('https://fal.run/fal-ai/image-apps-v2/outpaint', {
     method: 'POST',
     headers: {
@@ -290,10 +290,10 @@ async function extendImageVertically(
     return imageUrl
   }
   currentUrl = top1Result.images[0].url
-  console.log('[OUTPAINT] Pass 1/2 done')
+  console.log('[OUTPAINT] Pass 1/3 done')
 
   // Second pass: extend top again
-  console.log('[OUTPAINT] Pass 2/2: Extending top again...')
+  console.log('[OUTPAINT] Pass 2/3: Extending top again...')
   const top2Response = await fetch('https://fal.run/fal-ai/image-apps-v2/outpaint', {
     method: 'POST',
     headers: {
@@ -321,9 +321,41 @@ async function extendImageVertically(
     console.error('No top-extended image 2, returning current')
     return currentUrl
   }
+  currentUrl = top2Result.images[0].url
+  console.log('[OUTPAINT] Pass 2/3 done')
 
-  console.log('[OUTPAINT] Pass 2/2 done - image extended (top only, no bottom)')
-  return top2Result.images[0].url
+  // Third pass: extend top one more time
+  console.log('[OUTPAINT] Pass 3/3: Extending top final...')
+  const top3Response = await fetch('https://fal.run/fal-ai/image-apps-v2/outpaint', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image_url: currentUrl,
+      prompt: outpaintPrompt,
+      direction: 'top',
+      num_images: 1,
+      output_format: 'jpeg',
+      enable_safety_checker: false,
+    }),
+  })
+
+  if (!top3Response.ok) {
+    const error = await top3Response.text()
+    console.error('Top outpaint 3 failed, returning current:', error)
+    return currentUrl
+  }
+
+  const top3Result = await top3Response.json() as { images: Array<{ url: string }> }
+  if (!top3Result.images || top3Result.images.length === 0) {
+    console.error('No top-extended image 3, returning current')
+    return currentUrl
+  }
+
+  console.log('[OUTPAINT] Pass 3/3 done - image extended (3x top)')
+  return top3Result.images[0].url
 }
 
 // Swap face using FAL.ai Advanced Face Swap
