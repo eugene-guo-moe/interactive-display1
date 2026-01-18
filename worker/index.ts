@@ -686,9 +686,28 @@ export default {
         // This allows us to return the FAL.ai URL immediately for faster display
         ctx.waitUntil(
           (async () => {
+            // Helper to fetch with retries (CDN might need time to replicate)
+            async function fetchWithRetry(url: string, maxRetries = 3): Promise<ArrayBuffer> {
+              let lastError: Error | null = null
+              for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                  if (attempt > 0) {
+                    // Wait before retry (exponential backoff: 2s, 4s)
+                    await new Promise(r => setTimeout(r, 2000 * attempt))
+                    console.log(`[${imageId}] Retry attempt ${attempt + 1} for FAL CDN fetch`)
+                  }
+                  return await fetchImage(url)
+                } catch (err) {
+                  lastError = err instanceof Error ? err : new Error(String(err))
+                  console.log(`[${imageId}] Fetch attempt ${attempt + 1} failed: ${lastError.message}`)
+                }
+              }
+              throw lastError || new Error('All fetch attempts failed')
+            }
+
             try {
               const fetchStartTime = Date.now()
-              const finalImage = await fetchImage(generatedImageUrl)
+              const finalImage = await fetchWithRetry(generatedImageUrl)
               console.log(`[${imageId}] Fetch from FAL CDN: ${Date.now() - fetchStartTime}ms`)
 
               const uploadStartTime = Date.now()
