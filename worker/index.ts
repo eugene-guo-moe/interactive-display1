@@ -23,7 +23,7 @@ export interface Env {
 interface GenerateRequest {
   photo: string // base64 image data (with or without prefix)
   prompt: string
-  timePeriod: 'past' | 'future'
+  timePeriod: 'past' | 'present' | 'future'
 }
 
 interface GenerateResponse {
@@ -159,14 +159,63 @@ async function inpaintBackground(
   return result.images[0].url
 }
 
-// Generate scene with a person using FAL.ai Flux
+// Generate scene with person's face using IP-Adapter Face ID
+// This embeds the face INTO the generation - much better identity preservation
+async function generateWithIPAdapter(
+  prompt: string,
+  faceImageUrl: string,
+  gender: 'male' | 'female',
+  apiKey: string
+): Promise<string> {
+  const personTerm = gender === 'female' ? 'woman' : 'man'
+
+  // Clothing requirements for school-appropriate content
+  const clothingPrompt = gender === 'female'
+    ? 'wearing a modest full-coverage blouse or t-shirt'
+    : 'wearing a buttoned-up collared shirt or t-shirt'
+
+  const response = await fetch('https://fal.run/fal-ai/ip-adapter-face-id', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: `${prompt}, a ${personTerm} ${clothingPrompt} in the foreground, portrait from waist up, looking at viewer, high quality, photorealistic, consistent lighting, natural pose, family-friendly, appropriate for all ages`,
+      face_image_url: faceImageUrl,
+      model_type: 'SDXL-v2-plus', // Best quality model
+      negative_prompt: 'blurry, low quality, distorted, disfigured, bad anatomy, wrong proportions, extra limbs, mutated hands, ugly, duplicate, shirtless, bare chest, open shirt, unbuttoned, revealing clothing, low cut, sleeveless vest without shirt, exposed skin, swimwear, underwear, nudity, nsfw',
+      guidance_scale: 7.5,
+      num_inference_steps: 30, // Balance speed vs quality
+      num_samples: 1,
+      width: 1024,
+      height: 1024,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`FAL.ai IP-Adapter error: ${error}`)
+  }
+
+  const result = await response.json() as {
+    image: { url: string }
+  }
+
+  if (!result.image?.url) {
+    throw new Error('No image generated')
+  }
+
+  return result.image.url
+}
+
+// Legacy: Generate scene with a person using FAL.ai Flux (for fallback)
 async function generateSceneWithPerson(
   prompt: string,
   timePeriod: 'past' | 'future',
   gender: 'male' | 'female',
   apiKey: string
 ): Promise<string> {
-  // Use gender-specific terms with appropriate, modest descriptions
   const personTerm = gender === 'female'
     ? 'A modestly dressed woman wearing casual appropriate clothing'
     : 'A man wearing casual appropriate clothing'
@@ -179,9 +228,9 @@ async function generateSceneWithPerson(
     },
     body: JSON.stringify({
       prompt: `${prompt} with ${personTerm.toLowerCase()} in the foreground looking directly at the viewer, front-facing portrait from waist up, face clearly visible, making eye contact with camera, seamlessly blended into the environment, consistent lighting, neutral pleasant expression, flattering portrait lighting, photorealistic, family-friendly, appropriate for all ages.`,
-      image_size: 'portrait_16_9', // 9:16 ratio to fill phone screens
+      image_size: { width: 1024, height: 1024 },
       num_images: 1,
-      safety_tolerance: 1, // Strictest safety setting
+      safety_tolerance: 1,
     }),
   })
 
@@ -199,6 +248,82 @@ async function generateSceneWithPerson(
   }
 
   return result.images[0].url
+}
+
+// Extend image vertically using outpainting to fill phone screen
+// Does 2 passes: 2x top only - avoids generating feet/legs which can look odd
+async function extendImageVertically(
+  imageUrl: string,
+  prompt: string,
+  apiKey: string
+): Promise<string> {
+  const outpaintPrompt = `${prompt}, seamless extension, consistent lighting and atmosphere`
+  let currentUrl = imageUrl
+
+  // First pass: extend top
+  console.log('[OUTPAINT] Pass 1/2: Extending top...')
+  const top1Response = await fetch('https://fal.run/fal-ai/image-apps-v2/outpaint', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image_url: currentUrl,
+      prompt: outpaintPrompt,
+      direction: 'top',
+      num_images: 1,
+      output_format: 'jpeg',
+      enable_safety_checker: false,
+    }),
+  })
+
+  if (!top1Response.ok) {
+    const error = await top1Response.text()
+    console.error('Top outpaint 1 failed, returning original:', error)
+    return imageUrl
+  }
+
+  const top1Result = await top1Response.json() as { images: Array<{ url: string }> }
+  if (!top1Result.images || top1Result.images.length === 0) {
+    console.error('No top-extended image 1, returning original')
+    return imageUrl
+  }
+  currentUrl = top1Result.images[0].url
+  console.log('[OUTPAINT] Pass 1/2 done')
+
+  // Second pass: extend top again
+  console.log('[OUTPAINT] Pass 2/2: Extending top again...')
+  const top2Response = await fetch('https://fal.run/fal-ai/image-apps-v2/outpaint', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image_url: currentUrl,
+      prompt: outpaintPrompt,
+      direction: 'top',
+      num_images: 1,
+      output_format: 'jpeg',
+      enable_safety_checker: false,
+    }),
+  })
+
+  if (!top2Response.ok) {
+    const error = await top2Response.text()
+    console.error('Top outpaint 2 failed, returning current:', error)
+    return currentUrl
+  }
+
+  const top2Result = await top2Response.json() as { images: Array<{ url: string }> }
+  if (!top2Result.images || top2Result.images.length === 0) {
+    console.error('No top-extended image 2, returning current')
+    return currentUrl
+  }
+
+  console.log('[OUTPAINT] Pass 2/2 done - image extended (top only, no bottom)')
+  return top2Result.images[0].url
 }
 
 // Swap face using FAL.ai Advanced Face Swap
@@ -518,17 +643,18 @@ export default {
         timings['1_2_upload_and_gender'] = Date.now() - stepStart
         console.log(`[TIMING] Steps 1+2 - Upload to R2 + Gender detection (parallel): ${timings['1_2_upload_and_gender']}ms - Gender: ${detectedGender}`)
 
-        // Step 3: Generate scene with a person matching the detected gender
+        // Step 3: Generate scene with IP-Adapter Face ID (embeds face into generation)
+        // This replaces the old Flux + face-swap pipeline for better identity preservation
         stepStart = Date.now()
-        const sceneWithPersonUrl = await generateSceneWithPerson(prompt, timePeriod, detectedGender, env.FAL_KEY)
-        timings['3_flux_pro'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 3 - Flux Pro scene generation: ${timings['3_flux_pro']}ms`)
+        const generatedWithFaceUrl = await generateWithIPAdapter(prompt, userPhotoUrl, detectedGender, env.FAL_KEY)
+        timings['3_ip_adapter'] = Date.now() - stepStart
+        console.log(`[TIMING] Step 3 - IP-Adapter Face ID generation: ${timings['3_ip_adapter']}ms`)
 
-        // Step 4: Swap the face with user's actual face (using advanced face-swap)
+        // Step 4: Extend image vertically to fill phone screen
         stepStart = Date.now()
-        const generatedImageUrl = await swapFace(sceneWithPersonUrl, userPhotoUrl, detectedGender, env.FAL_KEY)
-        timings['4_face_swap'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 4 - Face swap: ${timings['4_face_swap']}ms`)
+        const generatedImageUrl = await extendImageVertically(generatedWithFaceUrl, prompt, env.FAL_KEY)
+        timings['4_outpaint'] = Date.now() - stepStart
+        console.log(`[TIMING] Step 4 - Outpaint to phone size: ${timings['4_outpaint']}ms`)
 
         // Fetch and store the final image
         stepStart = Date.now()
