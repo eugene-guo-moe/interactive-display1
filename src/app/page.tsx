@@ -121,7 +121,7 @@ export default function WelcomePage() {
       </div>
 
       {/* Progress dots */}
-      <div className="absolute bottom-36 sm:bottom-40 left-1/2 -translate-x-1/2 flex gap-4 z-20">
+      <div className="absolute bottom-44 sm:bottom-40 left-1/2 -translate-x-1/2 flex gap-4 z-20">
         {phases.map((p, i) => (
           <button
             key={i}
