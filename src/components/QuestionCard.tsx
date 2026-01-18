@@ -10,16 +10,15 @@ interface OptionProps {
   visible: boolean
   setRef?: (el: HTMLButtonElement | null) => void
   equalHeight?: number | null
-  compact?: boolean
 }
 
-function Option({ label, text, selected, onClick, visible, setRef, equalHeight, compact }: OptionProps) {
+function Option({ label, text, selected, onClick, visible, setRef, equalHeight }: OptionProps) {
   return (
     <button
       ref={setRef}
       onClick={onClick}
       style={equalHeight ? { height: `${equalHeight}px` } : undefined}
-      className={`${compact ? 'p-3 md:p-4' : 'p-4 md:p-5 lg:p-6'} rounded-2xl backdrop-blur-md border transition-all duration-300 ${
+      className={`py-[clamp(0.75rem,2vh,1.5rem)] px-[clamp(1rem,2vw,1.5rem)] rounded-2xl backdrop-blur-md border transition-all duration-300 ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
@@ -27,14 +26,14 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight, 
           : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
     >
-      <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${compact ? 'mb-1.5' : 'mb-2 md:mb-2.5'} ${
+      <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-[clamp(0.375rem,1vh,0.625rem)] ${
         selected
           ? 'bg-[#1e3a5f] text-white'
           : 'bg-white/20 text-white/80'
       }`}>
         {label}
       </span>
-      <span className={`font-medium ${compact ? 'text-sm' : 'text-sm md:text-base'} leading-snug block`}>{text}</span>
+      <span className="font-medium text-sm md:text-base leading-snug block">{text}</span>
     </button>
   )
 }
@@ -174,15 +173,15 @@ export default function QuestionCard({
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
       {/* Content */}
-      <div className={`relative z-10 flex-1 flex flex-col ${options.length === 3 ? 'p-3 md:p-4' : 'p-4 md:p-6'} overflow-y-auto`}>
+      <div className="relative z-10 flex-1 flex flex-col p-[clamp(0.75rem,2vh,1.5rem)] overflow-y-auto">
         {/* Step indicator */}
-        <div className={`${options.length === 3 ? 'mb-2 md:mb-3' : 'mb-4 md:mb-6'} pt-2 flex-shrink-0`}>
+        <div className="mb-[clamp(0.5rem,1.5vh,1.5rem)] pt-2 flex-shrink-0">
           <StepIndicator current={questionNumber} total={totalQuestions} />
         </div>
 
         {/* Question section with typewriter */}
-        <div className={`${options.length === 3 ? 'mb-2 md:mb-3' : 'mb-4 md:mb-6'} text-center px-4 flex-shrink-0`}>
-          <h2 className={`font-display ${options.length === 3 ? 'text-lg md:text-xl lg:text-2xl' : 'text-xl md:text-2xl lg:text-3xl'} font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg`}>
+        <div className="mb-[clamp(0.5rem,1.5vh,1.5rem)] text-center px-4 flex-shrink-0">
+          <h2 className="font-display text-[clamp(1.125rem,2.5vh,1.875rem)] font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (
               <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
@@ -194,10 +193,10 @@ export default function QuestionCard({
         <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12 min-h-0">
           <div
             ref={gridRef}
-            className={`grid w-full ${
+            className={`grid w-full gap-[clamp(0.5rem,1.5vh,1.5rem)] ${
               options.length === 3
-                ? 'gap-2 md:gap-3 grid-cols-1 max-w-lg'
-                : 'gap-3 md:gap-4 lg:gap-6 grid-cols-2 max-w-xl lg:max-w-3xl'
+                ? 'grid-cols-1 max-w-lg'
+                : 'grid-cols-2 max-w-xl lg:max-w-3xl'
             }`}
           >
             {options.map((option, index) => (
@@ -210,14 +209,13 @@ export default function QuestionCard({
                 visible={showOptions.includes(index)}
                 setRef={(el) => { optionRefs.current[index] = el }}
                 equalHeight={equalHeight}
-                compact={options.length === 3}
               />
             ))}
           </div>
         </div>
 
         {/* Navigation buttons */}
-        <div className={`${options.length === 3 ? 'mt-2 md:mt-3' : 'mt-4 md:mt-6'} max-w-xl mx-auto w-full px-4 pb-2 md:pb-4 flex-shrink-0 transition-all duration-300 ${
+        <div className={`mt-[clamp(0.5rem,1.5vh,1.5rem)] max-w-xl mx-auto w-full px-4 pb-[clamp(0.5rem,1vh,1rem)] flex-shrink-0 transition-all duration-300 ${
           showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}>
           {children}
