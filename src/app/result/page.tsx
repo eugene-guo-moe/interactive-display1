@@ -106,12 +106,12 @@ export default function ResultPage() {
       />
 
       {/* School indicator */}
-      <p className="relative z-10 text-white/40 text-xs sm:text-sm tracking-widest text-center pt-6 sm:pt-8 px-4">
+      <p className="relative z-10 text-white/40 text-xs sm:text-sm tracking-widest text-center pt-3 sm:pt-4 px-4">
         RIVERSIDE SECONDARY SCHOOL, SINGAPORE
       </p>
 
       {/* Header */}
-      <div className="relative z-10 p-4 md:p-5 pt-2 text-center shrink-0">
+      <div className="relative z-10 px-4 md:px-5 pb-2 text-center shrink-0">
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
@@ -165,7 +165,7 @@ export default function ResultPage() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[50vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-auto max-h-[48vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
