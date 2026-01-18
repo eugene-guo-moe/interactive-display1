@@ -29,13 +29,12 @@ export default function ResultPage() {
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [r2Ready, setR2Ready] = useState(false)
-  const [useR2ForDisplay, setUseR2ForDisplay] = useState(false)
 
   const timePeriod = getTimePeriod()
   const currentPhase = phases[timePeriod as keyof typeof phases] || phases.present
 
-  // Use the result image URL directly, fallback to R2 if FAL.ai fails
-  const displayImageUrl = useR2ForDisplay && qrUrl ? qrUrl : (resultImageUrl || photoData)
+  // Use the result image URL directly (FAL.ai URL)
+  const displayImageUrl = resultImageUrl || photoData
 
   useEffect(() => {
     // If no result image and no photo, redirect to start
@@ -215,13 +214,6 @@ export default function ResultPage() {
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
-                  onError={() => {
-                    // If FAL.ai URL fails, try R2 URL
-                    if (!useR2ForDisplay && qrUrl && qrUrl !== resultImageUrl) {
-                      console.log('FAL.ai URL failed, falling back to R2')
-                      setUseR2ForDisplay(true)
-                    }
-                  }}
                 />
                 {!imageLoaded && (
                   <div className="absolute inset-0 bg-white/5 flex items-center justify-center">
