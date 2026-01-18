@@ -87,21 +87,14 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
   return { allowed: true }
 }
 
-// Validate R2 path to prevent path traversal
+// Validate R2 path to prevent path traversal - strict pattern matching
 function isValidR2Path(path: string): boolean {
-  // Only allow alphanumeric, hyphens, underscores, dots, and forward slashes
-  if (!/^[a-zA-Z0-9\-_./]+$/.test(path)) {
-    return false
-  }
-  // Block path traversal attempts
-  if (path.includes('..') || path.includes('./') || path.startsWith('/')) {
-    return false
-  }
-  // Must start with allowed prefixes
-  if (!path.startsWith('generated/') && !path.startsWith('uploads/')) {
-    return false
-  }
-  return true
+  // Strict pattern: generated/{past|present|future}/{timestamp}-{random}.jpg
+  const generatedPattern = /^generated\/(past|present|future)\/\d+-[a-z0-9]{7}\.jpg$/
+  // Strict pattern: uploads/{timestamp}-face.jpg
+  const uploadsPattern = /^uploads\/\d+-[a-z0-9]{7}-face\.jpg$/
+
+  return generatedPattern.test(path) || uploadsPattern.test(path)
 }
 
 // Get allowed origins from env or default
@@ -118,21 +111,13 @@ function getAllowedOrigins(env: Env): string[] {
   ]
 }
 
-// Get CORS headers with origin validation
+// Get CORS headers with strict origin validation (no wildcards)
 function getCorsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get('Origin') || ''
   const allowedOrigins = getAllowedOrigins(env)
 
-  // Check if origin is allowed
-  const isAllowed = allowedOrigins.some(allowed => {
-    if (allowed === origin) return true
-    // Support wildcard subdomains
-    if (allowed.startsWith('*.')) {
-      const domain = allowed.slice(2)
-      return origin.endsWith(domain) || origin.endsWith('.' + domain)
-    }
-    return false
-  })
+  // Strict exact match only - no wildcard patterns allowed
+  const isAllowed = allowedOrigins.includes(origin)
 
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
@@ -152,10 +137,36 @@ function verifyApiKey(request: Request, env: Env): boolean {
   return providedKey === env.API_KEY
 }
 
+// Validate base64 string format
+function isValidBase64(str: string): boolean {
+  // Check for valid base64 characters and proper padding
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+  if (!base64Regex.test(str)) {
+    return false
+  }
+  // Length must be divisible by 4
+  if (str.length % 4 !== 0) {
+    return false
+  }
+  return true
+}
+
+// Validate JPEG magic number (first 2 bytes should be FF D8)
+function isValidJpeg(buffer: ArrayBuffer): boolean {
+  const bytes = new Uint8Array(buffer)
+  // Check JPEG magic number: 0xFF 0xD8
+  return bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xD8
+}
+
 // Extract base64 data from data URL if present
 function extractBase64(dataUrl: string): string {
   if (dataUrl.startsWith('data:')) {
-    return dataUrl.split(',')[1]
+    // Validate MIME type for images
+    const match = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/i)
+    if (!match) {
+      throw new Error('Invalid image data URL format')
+    }
+    return match[2]
   }
   return dataUrl
 }
@@ -183,6 +194,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 
 // Generate image with face using PuLID FLUX for better identity preservation (~91% accuracy)
 // PuLID provides superior face preservation compared to IP-Adapter Face ID (~70-75%)
+// Uses FAL.ai Queue API for better reliability on slow generations
 async function generateWithFaceId(
   faceImageUrl: string,
   prompt: string,
@@ -202,87 +214,133 @@ async function generateWithFaceId(
 
   const fullPrompt = `${prompt} featuring ${personTerm}${glassesDescription} wearing complete, modest, school-appropriate clothing with fully covered torso, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly, appropriate for all ages`
 
-  console.log('[PULID] Generating with prompt:', fullPrompt.substring(0, 100) + '...')
-  console.log('[PULID] Reference image:', faceImageUrl)
+  const requestBody = {
+    prompt: fullPrompt,
+    reference_image_url: faceImageUrl,
+    negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
+    num_inference_steps: 20,
+    guidance_scale: 4,
+    id_weight: 1.0,
+    image_size: {
+      width: 576,
+      height: 1024,
+    },
+    enable_safety_checker: true,
+  }
 
-  const response = await fetch('https://fal.run/fal-ai/flux-pulid', {
+  // Step 1: Submit to queue
+  const submitResponse = await fetch('https://queue.fal.run/fal-ai/flux-pulid', {
     method: 'POST',
     headers: {
       'Authorization': `Key ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      prompt: fullPrompt,
-      reference_image_url: faceImageUrl,
-      negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
-      num_inference_steps: 20,
-      guidance_scale: 4,
-      id_weight: 1.0, // Maximum identity preservation
-      image_size: {
-        width: 576,   // 9:16 aspect ratio for phones
-        height: 1024,
-      },
-      enable_safety_checker: true,
-    }),
+    body: JSON.stringify(requestBody),
   })
 
-  if (!response.ok) {
-    const error = await response.text()
-    console.error('[PULID] API error:', error)
-    throw new Error(`FAL.ai PuLID FLUX error: ${error}`)
+  if (!submitResponse.ok) {
+    const error = await submitResponse.text()
+    throw new Error(`FAL.ai queue submit error: ${error}`)
   }
 
-  const result = await response.json() as {
-    image?: { url: string; file_size?: number }
-    images?: Array<{ url: string; file_size?: number }>
+  const { request_id } = await submitResponse.json() as { request_id: string }
+
+  if (!request_id) {
+    throw new Error('No request_id returned from FAL.ai queue')
   }
 
-  console.log('[PULID] Raw response keys:', Object.keys(result))
+  // Step 2: Poll for completion (max 75 seconds with 2s intervals)
+  const maxPolls = 38 // 38 * 2s = 76s max
+  const pollInterval = 2000
 
-  // Handle both response formats (image or images array)
-  const outputUrl = result.image?.url || result.images?.[0]?.url
+  for (let i = 0; i < maxPolls; i++) {
+    await new Promise(resolve => setTimeout(resolve, pollInterval))
 
-  if (!outputUrl) {
-    console.log('[PULID] No URL found in response:', JSON.stringify(result))
-    throw new Error('No image generated with PuLID')
+    const statusResponse = await fetch(
+      `https://queue.fal.run/fal-ai/flux-pulid/requests/${request_id}/status`,
+      {
+        headers: {
+          'Authorization': `Key ${apiKey}`,
+        },
+      }
+    )
+
+    if (!statusResponse.ok) {
+      continue // Retry on status check failure
+    }
+
+    const status = await statusResponse.json() as { status: string }
+
+    if (status.status === 'COMPLETED') {
+      // Step 3: Fetch the result
+      const resultResponse = await fetch(
+        `https://queue.fal.run/fal-ai/flux-pulid/requests/${request_id}`,
+        {
+          headers: {
+            'Authorization': `Key ${apiKey}`,
+          },
+        }
+      )
+
+      if (!resultResponse.ok) {
+        const error = await resultResponse.text()
+        throw new Error(`FAL.ai result fetch error: ${error}`)
+      }
+
+      const result = await resultResponse.json() as {
+        image?: { url: string }
+        images?: Array<{ url: string }>
+      }
+
+      const outputUrl = result.image?.url || result.images?.[0]?.url
+
+      if (!outputUrl) {
+        throw new Error('No image in FAL.ai result')
+      }
+
+      return outputUrl
+    }
+
+    if (status.status === 'FAILED') {
+      throw new Error('FAL.ai generation failed')
+    }
+
+    // IN_QUEUE or IN_PROGRESS - continue polling
   }
 
-  const fileSize = result.image?.file_size || result.images?.[0]?.file_size
-  if (fileSize) {
-    console.log(`[PULID] Output file size: ${(fileSize / 1024).toFixed(1)} KB`)
-  }
-
-  console.log('[PULID] Generated image:', outputUrl)
-  return outputUrl
+  throw new Error('FAL.ai generation timed out')
 }
 
 // Fetch image from URL with size validation
 const MAX_FETCH_SIZE = 20 * 1024 * 1024 // 20MB max for fetched images
 
 async function fetchImage(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${url}`)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: HTTP ${response.status}`)
+    }
+
+    // Validate Content-Length before downloading
+    const contentLength = response.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > MAX_FETCH_SIZE) {
+      throw new Error(`Image too large: ${(parseInt(contentLength) / 1024 / 1024).toFixed(1)}MB exceeds ${MAX_FETCH_SIZE / 1024 / 1024}MB limit`)
+    }
+
+    const buffer = await response.arrayBuffer()
+
+    // Double-check actual size after download
+    if (buffer.byteLength > MAX_FETCH_SIZE) {
+      throw new Error(`Downloaded image too large: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`)
+    }
+
+    return buffer
+  } finally {
+    clearTimeout(timeoutId)
   }
-
-  // Validate Content-Length before downloading
-  const contentLength = response.headers.get('content-length')
-  if (contentLength && parseInt(contentLength) > MAX_FETCH_SIZE) {
-    throw new Error(`Image too large: ${(parseInt(contentLength) / 1024 / 1024).toFixed(1)}MB exceeds ${MAX_FETCH_SIZE / 1024 / 1024}MB limit`)
-  }
-
-  console.log(`[FETCH] Downloading from: ${url.substring(0, 80)}...`)
-  console.log(`[FETCH] Content-Length: ${contentLength ? `${(parseInt(contentLength) / 1024).toFixed(1)} KB` : 'unknown'}`)
-
-  const buffer = await response.arrayBuffer()
-
-  // Double-check actual size after download
-  if (buffer.byteLength > MAX_FETCH_SIZE) {
-    throw new Error(`Downloaded image too large: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`)
-  }
-
-  console.log(`[FETCH] Downloaded: ${(buffer.byteLength / 1024).toFixed(1)} KB`)
-  return buffer
 }
 
 // Generate a unique ID
@@ -317,25 +375,28 @@ async function detectFaceAttributes(
 
     const rekognitionEndpoint = `https://rekognition.${env.AWS_REGION || 'us-east-1'}.amazonaws.com/`
 
-    const response = await aws.fetch(rekognitionEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': 'RekognitionService.DetectFaces',
-      },
-      body: JSON.stringify({
-        Image: {
-          Bytes: base64Image,
-        },
-        Attributes: ['GENDER', 'EYEGLASSES'],
-      }),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout for face detection
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('AWS Rekognition error:', errorText)
-      return defaultAttributes
-    }
+    try {
+      const response = await aws.fetch(rekognitionEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-amz-json-1.1',
+          'X-Amz-Target': 'RekognitionService.DetectFaces',
+        },
+        body: JSON.stringify({
+          Image: {
+            Bytes: base64Image,
+          },
+          Attributes: ['GENDER', 'EYEGLASSES'],
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        return defaultAttributes
+      }
 
     const result = await response.json() as {
       FaceDetails?: Array<{
@@ -350,22 +411,19 @@ async function detectFaceAttributes(
       }>
     }
 
-    // Get the first face's attributes
-    const faceDetails = result.FaceDetails?.[0]
-    if (faceDetails) {
-      const gender = faceDetails.Gender?.Value?.toLowerCase() as 'male' | 'female' || 'male'
-      const genderConfidence = faceDetails.Gender?.Confidence || 0
-      const hasGlasses = faceDetails.Eyeglasses?.Value || false
-      const glassesConfidence = faceDetails.Eyeglasses?.Confidence || 0
+      // Get the first face's attributes
+      const faceDetails = result.FaceDetails?.[0]
+      if (faceDetails) {
+        const gender = faceDetails.Gender?.Value?.toLowerCase() as 'male' | 'female' || 'male'
+        const hasGlasses = faceDetails.Eyeglasses?.Value || false
+        return { gender, hasGlasses }
+      }
 
-      console.log(`AWS Rekognition - Gender: ${gender} (${genderConfidence.toFixed(1)}%), Glasses: ${hasGlasses} (${glassesConfidence.toFixed(1)}%)`)
-      return { gender, hasGlasses }
+      return defaultAttributes
+    } finally {
+      clearTimeout(timeoutId)
     }
-
-    console.log('No face detected by AWS Rekognition, using defaults')
-    return defaultAttributes
-  } catch (error) {
-    console.error('AWS Rekognition error:', error)
+  } catch {
     return defaultAttributes
   }
 }
@@ -400,10 +458,9 @@ export default {
       })
     }
 
-    // Get client IP for rate limiting
-    const clientIP = request.headers.get('CF-Connecting-IP') ||
-                     request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
-                     'unknown'
+    // Get client IP for rate limiting - only trust Cloudflare's header
+    // CF-Connecting-IP is set by Cloudflare and cannot be spoofed by clients
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown'
 
     // Test gender detection endpoint (requires auth)
     if (url.pathname === '/test-gender' && request.method === 'POST') {
@@ -484,8 +541,7 @@ export default {
         }), {
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
         })
-      } catch (error) {
-        console.error('Face detection error:', error)
+      } catch {
         return new Response(JSON.stringify({
           success: false,
           error: 'Gender detection failed'
@@ -570,10 +626,32 @@ export default {
 
         const imageId = generateId()
         const photoBase64 = extractBase64(photo)
+
+        // Validate base64 format
+        if (!isValidBase64(photoBase64)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid image format' }),
+            {
+              status: 400,
+              headers: { ...allHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+
         const photoBuffer = base64ToArrayBuffer(photoBase64)
 
+        // Validate JPEG magic number
+        if (!isValidJpeg(photoBuffer)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid image: must be JPEG format' }),
+            {
+              status: 400,
+              headers: { ...allHeaders, 'Content-Type': 'application/json' },
+            }
+          )
+        }
+
         // Steps 1 & 2 run in PARALLEL: Upload to R2 + Detect face attributes (independent operations)
-        let stepStart = Date.now()
         const userPhotoPath = `uploads/${imageId}-face.jpg`
 
         const [_, faceAttributes] = await Promise.all([
@@ -586,24 +664,15 @@ export default {
         ])
 
         const userPhotoUrl = `${env.PUBLIC_URL}/${userPhotoPath}`
-        timings['1_2_upload_and_face_detection'] = Date.now() - stepStart
-        console.log(`[TIMING] Steps 1+2 - Upload to R2 + Face detection (parallel): ${timings['1_2_upload_and_face_detection']}ms - Gender: ${faceAttributes.gender}, Glasses: ${faceAttributes.hasGlasses}`)
 
         // Step 3: Generate image with face embedded using PuLID FLUX
         // PuLID achieves ~91% face recognition accuracy vs IP-Adapter's ~70-75%
-        stepStart = Date.now()
         const generatedImageUrl = await generateWithFaceId(userPhotoUrl, prompt, timePeriod, faceAttributes, env.FAL_KEY)
-        timings['3_pulid_generation'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 3 - PuLID FLUX generation: ${timings['3_pulid_generation']}ms`)
 
         // Step 4: Fetch and store the final image
         // PuLID already outputs 576x1024 (9:16) which is phone fullscreen - no outpaint needed
-        stepStart = Date.now()
         const finalImage = await fetchImage(generatedImageUrl)
-        timings['4_fetch_final'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 4 - Fetch final image: ${timings['4_fetch_final']}ms`)
 
-        stepStart = Date.now()
         const imagePath = `generated/${timePeriod}/${imageId}.jpg`
         await env.IMAGES_BUCKET.put(imagePath, finalImage, {
           httpMetadata: {
@@ -615,27 +684,19 @@ export default {
             // Don't store prompt in metadata for privacy
           },
         })
-        timings['5_store_r2'] = Date.now() - stepStart
-        console.log(`[TIMING] Step 5 - Store to R2: ${timings['5_store_r2']}ms`)
 
         // Generate public URL
         const publicUrl = `${env.PUBLIC_URL}/${imagePath}`
-
-        const totalTime = Date.now() - startTime
-        timings['total'] = totalTime
-        console.log(`[TIMING] TOTAL: ${totalTime}ms`)
-        console.log(`[TIMING] Summary: ${JSON.stringify(timings)}`)
 
         const response: GenerateResponse = {
           imageUrl: publicUrl,
           qrUrl: publicUrl,
         }
 
-        return new Response(JSON.stringify({ ...response, timings }), {
+        return new Response(JSON.stringify(response), {
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
         })
-      } catch (error) {
-        console.error('Generation error:', error)
+      } catch {
         return new Response(
           JSON.stringify({ error: 'Image generation failed' }),
           {
