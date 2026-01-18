@@ -6,10 +6,13 @@ compatibility_date = "2024-01-01"
 # FAL_KEY - API key for FAL.ai
 # AWS_ACCESS_KEY_ID - AWS access key for Rekognition
 # AWS_SECRET_ACCESS_KEY - AWS secret key for Rekognition
+# API_KEY - API key for authenticating requests from the frontend (optional but recommended)
 
 [vars]
 PUBLIC_URL = "https://riversidesec.eugene-ff3.workers.dev"
 AWS_REGION = "ap-southeast-1"
+# Comma-separated list of allowed origins for CORS
+ALLOWED_ORIGINS = "https://interactive-display.vercel.app,https://riversidesec.vercel.app,http://localhost:3000"
 
 # R2 bucket binding
 [[r2_buckets]]

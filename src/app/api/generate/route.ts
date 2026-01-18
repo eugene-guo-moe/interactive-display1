@@ -3,8 +3,23 @@ import type { QuizAnswers } from '@/types/quiz'
 
 export const runtime = 'edge'
 
-// Worker URL - hardcoded for now
-const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
+// Worker URL from environment variable
+const WORKER_URL = process.env.WORKER_URL || 'https://riversidesec.eugene-ff3.workers.dev'
+const WORKER_API_KEY = process.env.WORKER_API_KEY || ''
+
+// Security constants
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB max for base64 string
+const VALID_Q1_Q2_ANSWERS = ['A', 'B', 'C', 'D'] as const
+const VALID_Q3_ANSWERS = ['A', 'B', 'C'] as const
+
+// Validate quiz answers against whitelist
+function validateAnswers(answers: QuizAnswers): boolean {
+  if (!answers.q1 || !answers.q2 || !answers.q3) return false
+  if (!VALID_Q1_Q2_ANSWERS.includes(answers.q1 as typeof VALID_Q1_Q2_ANSWERS[number])) return false
+  if (!VALID_Q1_Q2_ANSWERS.includes(answers.q2 as typeof VALID_Q1_Q2_ANSWERS[number])) return false
+  if (!VALID_Q3_ANSWERS.includes(answers.q3 as typeof VALID_Q3_ANSWERS[number])) return false
+  return true
+}
 
 // Build prompt based on quiz answers (inlined to avoid import issues)
 function buildPrompt(answers: QuizAnswers): string {
@@ -81,13 +96,38 @@ interface GenerateRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check Content-Length header first (before parsing body)
+    const contentLength = request.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > MAX_PHOTO_SIZE + 1024) {
+      return NextResponse.json(
+        { error: 'Request too large' },
+        { status: 413 }
+      )
+    }
+
     const body: GenerateRequest = await request.json()
     const { photo, answers, generationMethod = 'v1' } = body
 
-    // Validate inputs
-    if (!photo || !answers.q1 || !answers.q2 || !answers.q3) {
+    // Validate photo size (base64 string length)
+    if (!photo || photo.length > MAX_PHOTO_SIZE) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Photo is missing or too large (max 5MB)' },
+        { status: 400 }
+      )
+    }
+
+    // Validate quiz answers against whitelist
+    if (!validateAnswers(answers)) {
+      return NextResponse.json(
+        { error: 'Invalid quiz answers' },
+        { status: 400 }
+      )
+    }
+
+    // Validate generation method
+    if (generationMethod !== 'v1' && generationMethod !== 'v2') {
+      return NextResponse.json(
+        { error: 'Invalid generation method' },
         { status: 400 }
       )
     }
@@ -102,11 +142,12 @@ export async function POST(request: NextRequest) {
     const endpoint = generationMethod === 'v2' ? '/generate-v2' : '/generate'
     console.log(`Using generation method: ${generationMethod} (${endpoint})`)
 
-    // Call the Cloudflare Worker
+    // Call the Cloudflare Worker with API key authentication
     const workerResponse = await fetch(`${WORKER_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(WORKER_API_KEY && { 'X-API-Key': WORKER_API_KEY }),
       },
       body: JSON.stringify({
         photo,
@@ -117,7 +158,9 @@ export async function POST(request: NextRequest) {
 
     if (!workerResponse.ok) {
       const error = await workerResponse.text()
-      throw new Error(`Worker error: ${error}`)
+      console.error('Worker error:', error)
+      // Don't expose internal error details to client
+      throw new Error('Image generation service error')
     }
 
     const result = await workerResponse.json()
@@ -134,11 +177,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Generate API error:', error)
+    // Don't expose internal error details in production
     return NextResponse.json(
-      {
-        error: 'Failed to generate image',
-        details: error instanceof Error ? error.message : String(error)
-      },
+      { error: 'Failed to generate image. Please try again.' },
       { status: 500 }
     )
   }
