@@ -14,7 +14,7 @@ function Option({ label, text, selected, onClick, visible }: OptionProps) {
   return (
     <button
       onClick={onClick}
-      className={`p-5 md:p-8 lg:p-10 rounded-2xl backdrop-blur-md border transition-all duration-300 ${
+      className={`p-5 md:p-8 lg:p-10 rounded-2xl backdrop-blur-md border transition-all duration-300 min-h-[88px] md:min-h-[120px] ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
