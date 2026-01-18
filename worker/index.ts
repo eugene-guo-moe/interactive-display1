@@ -187,15 +187,20 @@ async function generateWithFaceId(
   faceImageUrl: string,
   prompt: string,
   timePeriod: 'past' | 'present' | 'future',
-  gender: 'male' | 'female',
+  faceAttributes: FaceAttributes,
   apiKey: string
 ): Promise<string> {
   // Use gender-specific terms with appropriate descriptions
-  const personTerm = gender === 'female'
+  const personTerm = faceAttributes.gender === 'female'
     ? 'a woman'
     : 'a man'
 
-  const fullPrompt = `${prompt} featuring ${personTerm} wearing complete, modest, school-appropriate clothing with fully covered torso, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly, appropriate for all ages`
+  // Add glasses to prompt if detected
+  const glassesDescription = faceAttributes.hasGlasses
+    ? ' wearing glasses'
+    : ''
+
+  const fullPrompt = `${prompt} featuring ${personTerm}${glassesDescription} wearing complete, modest, school-appropriate clothing with fully covered torso, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly, appropriate for all ages`
 
   console.log('[PULID] Generating with prompt:', fullPrompt.substring(0, 100) + '...')
   console.log('[PULID] Reference image:', faceImageUrl)
@@ -251,16 +256,31 @@ async function generateWithFaceId(
   return outputUrl
 }
 
-// Fetch image from URL with size logging
+// Fetch image from URL with size validation
+const MAX_FETCH_SIZE = 20 * 1024 * 1024 // 20MB max for fetched images
+
 async function fetchImage(url: string): Promise<ArrayBuffer> {
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Failed to fetch image: ${url}`)
   }
+
+  // Validate Content-Length before downloading
   const contentLength = response.headers.get('content-length')
+  if (contentLength && parseInt(contentLength) > MAX_FETCH_SIZE) {
+    throw new Error(`Image too large: ${(parseInt(contentLength) / 1024 / 1024).toFixed(1)}MB exceeds ${MAX_FETCH_SIZE / 1024 / 1024}MB limit`)
+  }
+
   console.log(`[FETCH] Downloading from: ${url.substring(0, 80)}...`)
   console.log(`[FETCH] Content-Length: ${contentLength ? `${(parseInt(contentLength) / 1024).toFixed(1)} KB` : 'unknown'}`)
+
   const buffer = await response.arrayBuffer()
+
+  // Double-check actual size after download
+  if (buffer.byteLength > MAX_FETCH_SIZE) {
+    throw new Error(`Downloaded image too large: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`)
+  }
+
   console.log(`[FETCH] Downloaded: ${(buffer.byteLength / 1024).toFixed(1)} KB`)
   return buffer
 }
@@ -270,11 +290,19 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
-// Detect gender from face image using AWS Rekognition
-async function detectGender(
+// Face attributes detected by AWS Rekognition
+interface FaceAttributes {
+  gender: 'male' | 'female'
+  hasGlasses: boolean
+}
+
+// Detect face attributes (gender, glasses) from face image using AWS Rekognition
+async function detectFaceAttributes(
   imageBytes: ArrayBuffer,
   env: Env
-): Promise<'male' | 'female'> {
+): Promise<FaceAttributes> {
+  const defaultAttributes: FaceAttributes = { gender: 'male', hasGlasses: false }
+
   try {
     const aws = new AwsClient({
       accessKeyId: env.AWS_ACCESS_KEY_ID,
@@ -299,14 +327,14 @@ async function detectGender(
         Image: {
           Bytes: base64Image,
         },
-        Attributes: ['GENDER'],
+        Attributes: ['GENDER', 'EYEGLASSES'],
       }),
     })
 
     if (!response.ok) {
       const errorText = await response.text()
       console.error('AWS Rekognition error:', errorText)
-      return 'male' // Default fallback
+      return defaultAttributes
     }
 
     const result = await response.json() as {
@@ -315,29 +343,37 @@ async function detectGender(
           Value: 'Male' | 'Female'
           Confidence: number
         }
+        Eyeglasses?: {
+          Value: boolean
+          Confidence: number
+        }
       }>
     }
 
-    // Get the first face's gender
+    // Get the first face's attributes
     const faceDetails = result.FaceDetails?.[0]
-    if (faceDetails?.Gender) {
-      const gender = faceDetails.Gender.Value.toLowerCase() as 'male' | 'female'
-      const confidence = faceDetails.Gender.Confidence
-      console.log(`AWS Rekognition detected gender: ${gender} (${confidence.toFixed(1)}% confidence)`)
-      return gender
+    if (faceDetails) {
+      const gender = faceDetails.Gender?.Value?.toLowerCase() as 'male' | 'female' || 'male'
+      const genderConfidence = faceDetails.Gender?.Confidence || 0
+      const hasGlasses = faceDetails.Eyeglasses?.Value || false
+      const glassesConfidence = faceDetails.Eyeglasses?.Confidence || 0
+
+      console.log(`AWS Rekognition - Gender: ${gender} (${genderConfidence.toFixed(1)}%), Glasses: ${hasGlasses} (${glassesConfidence.toFixed(1)}%)`)
+      return { gender, hasGlasses }
     }
 
-    console.log('No face detected by AWS Rekognition, defaulting to male')
-    return 'male'
+    console.log('No face detected by AWS Rekognition, using defaults')
+    return defaultAttributes
   } catch (error) {
     console.error('AWS Rekognition error:', error)
-    return 'male' // Default fallback
+    return defaultAttributes
   }
 }
 
 // Security headers for all responses
 function getSecurityHeaders(): Record<string, string> {
   return {
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',
@@ -437,18 +473,19 @@ export default {
         }
         const imageBytes = await imageResponse.arrayBuffer()
 
-        // Detect gender
-        const gender = await detectGender(imageBytes, env)
+        // Detect face attributes
+        const faceAttributes = await detectFaceAttributes(imageBytes, env)
 
         return new Response(JSON.stringify({
           success: true,
           imageUrl,
-          gender,
+          gender: faceAttributes.gender,
+          hasGlasses: faceAttributes.hasGlasses,
         }), {
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
         })
       } catch (error) {
-        console.error('Gender detection error:', error)
+        console.error('Face detection error:', error)
         return new Response(JSON.stringify({
           success: false,
           error: 'Gender detection failed'
@@ -535,27 +572,27 @@ export default {
         const photoBase64 = extractBase64(photo)
         const photoBuffer = base64ToArrayBuffer(photoBase64)
 
-        // Steps 1 & 2 run in PARALLEL: Upload to R2 + Detect gender (independent operations)
+        // Steps 1 & 2 run in PARALLEL: Upload to R2 + Detect face attributes (independent operations)
         let stepStart = Date.now()
         const userPhotoPath = `uploads/${imageId}-face.jpg`
 
-        const [_, detectedGender] = await Promise.all([
+        const [_, faceAttributes] = await Promise.all([
           // Step 1: Upload user's photo to R2
           env.IMAGES_BUCKET.put(userPhotoPath, photoBuffer, {
             httpMetadata: { contentType: 'image/jpeg' },
           }),
-          // Step 2: Detect gender using AWS Rekognition
-          detectGender(photoBuffer, env)
+          // Step 2: Detect face attributes (gender, glasses) using AWS Rekognition
+          detectFaceAttributes(photoBuffer, env)
         ])
 
         const userPhotoUrl = `${env.PUBLIC_URL}/${userPhotoPath}`
-        timings['1_2_upload_and_gender'] = Date.now() - stepStart
-        console.log(`[TIMING] Steps 1+2 - Upload to R2 + Gender detection (parallel): ${timings['1_2_upload_and_gender']}ms - Gender: ${detectedGender}`)
+        timings['1_2_upload_and_face_detection'] = Date.now() - stepStart
+        console.log(`[TIMING] Steps 1+2 - Upload to R2 + Face detection (parallel): ${timings['1_2_upload_and_face_detection']}ms - Gender: ${faceAttributes.gender}, Glasses: ${faceAttributes.hasGlasses}`)
 
         // Step 3: Generate image with face embedded using PuLID FLUX
         // PuLID achieves ~91% face recognition accuracy vs IP-Adapter's ~70-75%
         stepStart = Date.now()
-        const generatedImageUrl = await generateWithFaceId(userPhotoUrl, prompt, timePeriod, detectedGender, env.FAL_KEY)
+        const generatedImageUrl = await generateWithFaceId(userPhotoUrl, prompt, timePeriod, faceAttributes, env.FAL_KEY)
         timings['3_pulid_generation'] = Date.now() - stepStart
         console.log(`[TIMING] Step 3 - PuLID FLUX generation: ${timings['3_pulid_generation']}ms`)
 
@@ -630,7 +667,7 @@ export default {
       // Different cache durations for different paths
       const isUpload = key.startsWith('uploads/')
       const cacheControl = isUpload
-        ? 'private, max-age=300' // 5 minutes for uploads
+        ? 'private, no-store' // No caching for uploads (kiosk privacy)
         : 'public, max-age=86400' // 1 day for generated images
 
       return new Response(object.body, {
