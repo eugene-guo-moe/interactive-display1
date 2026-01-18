@@ -215,7 +215,7 @@ export default function QuestionCard({
         </div>
 
         {/* Navigation buttons */}
-        <div className={`mt-8 max-w-xl mx-auto w-full px-4 pb-4 transition-all duration-300 ${
+        <div className={`mt-4 sm:mt-8 max-w-xl mx-auto w-full px-4 pb-4 transition-all duration-300 ${
           showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}>
           {children}
