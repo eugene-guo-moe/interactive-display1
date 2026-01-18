@@ -6,7 +6,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 
 export default function CameraPage() {
   const router = useRouter()
-  const { setPhotoData, answers } = useQuiz()
+  const { setPhotoData, answers, isHydrated } = useQuiz()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
@@ -16,12 +16,12 @@ export default function CameraPage() {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null)
   const [showFlash, setShowFlash] = useState(false)
 
-  // Check if all questions are answered
+  // Check if all questions are answered (only after context hydration)
   useEffect(() => {
-    if (!answers.q1 || !answers.q2 || !answers.q3) {
+    if (isHydrated && (!answers.q1 || !answers.q2 || !answers.q3)) {
       router.push('/')
     }
-  }, [answers, router])
+  }, [isHydrated, answers, router])
 
   // Initialize camera
   useEffect(() => {
