@@ -285,9 +285,10 @@ async function generateWithFaceId(
       negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
       num_inference_steps: 30,
       guidance_scale: 7.5,
-      face_id_weight: 0.7, // Balance between face identity and prompt adherence
-      image_size: 'portrait_16_9',
-      num_images: 1,
+      model_type: 'SDXL-v2-plus', // Use SDXL for better quality
+      width: 576,  // 9:16 aspect ratio for phones
+      height: 1024,
+      num_samples: 1,
     }),
   })
 
@@ -297,18 +298,23 @@ async function generateWithFaceId(
   }
 
   const result = await response.json() as {
-    images: Array<{ url: string; file_size?: number }>
+    image?: { url: string; file_size?: number }
+    images?: Array<{ url: string; file_size?: number }>
   }
 
-  if (!result.images || result.images.length === 0) {
+  // Handle both response formats (image or images array)
+  const outputUrl = result.image?.url || result.images?.[0]?.url
+
+  if (!outputUrl) {
     throw new Error('No image generated with Face ID')
   }
 
-  if (result.images[0].file_size) {
-    console.log(`[FACE-ID] Output file size: ${(result.images[0].file_size / 1024).toFixed(1)} KB`)
+  const fileSize = result.image?.file_size || result.images?.[0]?.file_size
+  if (fileSize) {
+    console.log(`[FACE-ID] Output file size: ${(fileSize / 1024).toFixed(1)} KB`)
   }
 
-  return result.images[0].url
+  return outputUrl
 }
 
 // Legacy: Swap face using FAL.ai Advanced Face Swap (kept for fallback)
