@@ -134,7 +134,7 @@ async function inpaintBackground(
       inpaint_image_url: imageUrl,
       mask_image_url: maskUrl,
       invert_mask: true, // Invert the mask so we fill the background, not the person
-      negative_prompt: 'blurry, low quality, distorted face, extra limbs',
+      negative_prompt: 'blurry, low quality, distorted face, extra limbs, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
       guidance_scale: 7,
       sharpness: 2,
       output_format: 'jpeg',
@@ -178,7 +178,8 @@ async function generateSceneWithPerson(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      prompt: `${prompt} with ${personTerm.toLowerCase()} in the foreground looking directly at the viewer, front-facing portrait from waist up, face clearly visible, making eye contact with camera, seamlessly blended into the environment, consistent lighting, neutral pleasant expression, flattering portrait lighting, photorealistic, family-friendly, appropriate for all ages.`,
+      prompt: `${prompt} with ${personTerm.toLowerCase()} in the foreground looking directly at the viewer, front-facing portrait from waist up, face clearly visible, making eye contact with camera, seamlessly blended into the environment, consistent lighting, neutral pleasant expression, flattering portrait lighting, photorealistic, family-friendly, appropriate for all ages. Person is wearing complete, modest, school-appropriate clothing with fully covered torso.`,
+      negative_prompt: 'bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
       image_size: 'portrait_16_9', // 9:16 ratio to fill phone screens
       num_images: 1,
       safety_tolerance: 1, // Strictest safety setting
@@ -201,6 +202,60 @@ async function generateSceneWithPerson(
   return result.images[0].url
 }
 
+// Outpaint the top of an image to extend it for fullscreen phones
+// Uses FAL.ai's creative upscaler with uncrop mode to seamlessly extend the scene upward
+async function outpaintTop(
+  imageUrl: string,
+  prompt: string,
+  apiKey: string
+): Promise<string> {
+  console.log('[OUTPAINT] Extending image top for fullscreen display...')
+
+  // Use creative upscaler with uncrop mode - this extends the image without changing resolution
+  const response = await fetch('https://fal.run/fal-ai/creative-upscaler', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image_url: imageUrl,
+      prompt: `${prompt}, expansive sky, natural scene continuation, consistent lighting and atmosphere`,
+      scale: 1, // Don't upscale resolution, just extend
+      creativity: 0.3, // Low creativity to maintain scene consistency
+      detail: 1,
+      shape_preservation: 0.85,
+      uncrop: true,
+      uncrop_top: 0.33, // Extend top by ~1/3 to achieve roughly 9:16 from 16:9
+      uncrop_bottom: 0,
+      uncrop_left: 0,
+      uncrop_right: 0,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('[OUTPAINT] Creative upscaler failed:', error)
+    // Return original image if outpainting fails - don't block the pipeline
+    return imageUrl
+  }
+
+  const result = await response.json() as {
+    image?: { url: string }
+    images?: Array<{ url: string }>
+  }
+
+  const outputUrl = result.image?.url || result.images?.[0]?.url
+
+  if (!outputUrl) {
+    console.log('[OUTPAINT] No result, returning original image')
+    return imageUrl
+  }
+
+  console.log('[OUTPAINT] Successfully extended image top')
+  return outputUrl
+}
+
 // Generate image with face embedded using IP-Adapter Face ID
 // This embeds the face INTO the generation process for better identity preservation (~70-75% match)
 // compared to face-swap which only achieves ~20-30% match
@@ -216,7 +271,7 @@ async function generateWithFaceId(
     ? 'a woman'
     : 'a man'
 
-  const fullPrompt = `${prompt} featuring ${personTerm} in the foreground, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting`
+  const fullPrompt = `${prompt} featuring ${personTerm} wearing complete, modest, school-appropriate clothing with fully covered torso in the foreground, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly`
 
   const response = await fetch('https://fal.run/fal-ai/ip-adapter-face-id', {
     method: 'POST',
@@ -227,7 +282,7 @@ async function generateWithFaceId(
     body: JSON.stringify({
       prompt: fullPrompt,
       face_image_url: faceImageUrl,
-      negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured',
+      negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
       num_inference_steps: 30,
       guidance_scale: 7.5,
       face_id_weight: 0.7, // Balance between face identity and prompt adherence
@@ -581,9 +636,15 @@ export default {
         timings['3_face_id_generation'] = Date.now() - stepStart
         console.log(`[TIMING] Step 3 - IP-Adapter Face ID generation: ${timings['3_face_id_generation']}ms`)
 
+        // Step 4: Outpaint top of image for fullscreen phone display
+        stepStart = Date.now()
+        const outpaintedImageUrl = await outpaintTop(generatedImageUrl, prompt, env.FAL_KEY)
+        timings['4_outpaint_top'] = Date.now() - stepStart
+        console.log(`[TIMING] Step 4 - Outpaint top: ${timings['4_outpaint_top']}ms`)
+
         // Fetch and store the final image
         stepStart = Date.now()
-        const finalImage = await fetchImage(generatedImageUrl)
+        const finalImage = await fetchImage(outpaintedImageUrl)
         timings['5a_fetch_final'] = Date.now() - stepStart
         console.log(`[TIMING] Step 5a - Fetch final image: ${timings['5a_fetch_final']}ms`)
 
