@@ -28,6 +28,7 @@ export default function ResultPage() {
   const { resultImageUrl, qrUrl, getTimePeriod, resetQuiz, photoData } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [r2Ready, setR2Ready] = useState(false)
 
   const timePeriod = getTimePeriod()
   const currentPhase = phases[timePeriod as keyof typeof phases] || phases.present
@@ -47,24 +48,67 @@ export default function ResultPage() {
     return () => clearTimeout(timer)
   }, [resultImageUrl, photoData, router])
 
+  // Poll R2 URL until it's ready, then silently switch
+  useEffect(() => {
+    if (!qrUrl || r2Ready) return
+
+    // If qrUrl is same as resultImageUrl (both FAL.ai), no need to poll
+    if (qrUrl === resultImageUrl) {
+      setR2Ready(true)
+      return
+    }
+
+    let cancelled = false
+    const pollInterval = 2000 // Check every 2 seconds
+    const maxAttempts = 30 // Max 60 seconds of polling
+
+    const checkR2Ready = async (attempt: number) => {
+      if (cancelled || attempt >= maxAttempts) return
+
+      try {
+        const response = await fetch(qrUrl, { method: 'HEAD' })
+        if (response.ok) {
+          setR2Ready(true)
+          return
+        }
+      } catch {
+        // R2 not ready yet, continue polling
+      }
+
+      // Schedule next check
+      setTimeout(() => checkR2Ready(attempt + 1), pollInterval)
+    }
+
+    // Start polling after a short delay (give R2 upload a head start)
+    const startTimer = setTimeout(() => checkR2Ready(0), 3000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(startTimer)
+    }
+  }, [qrUrl, resultImageUrl, r2Ready])
+
   const handleStartOver = () => {
     resetQuiz()
     router.push('/')
   }
 
+  // Use R2 URL for download if ready, otherwise use FAL.ai URL
+  const activeDownloadUrl = r2Ready && qrUrl ? qrUrl : resultImageUrl
+
   const handleDownload = async () => {
-    if (!resultImageUrl) return
+    if (!activeDownloadUrl) return
 
     try {
       // Open in new tab for download
-      window.open(resultImageUrl, '_blank')
+      window.open(activeDownloadUrl, '_blank')
     } catch (err) {
       console.error('Download error:', err)
     }
   }
 
-  // Use qrUrl (R2 permanent URL) for QR code, fallback to resultImageUrl
-  const downloadUrl = qrUrl || resultImageUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/download/demo`
+  // Start with FAL.ai URL, switch to R2 when ready
+  const downloadUrl = activeDownloadUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/download/demo`
 
   return (
     <div className="relative flex-1 flex flex-col page-transition overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', backgroundColor: '#050505' }}>
