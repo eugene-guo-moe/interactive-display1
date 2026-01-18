@@ -18,7 +18,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
       ref={setRef}
       onClick={onClick}
       style={equalHeight ? { height: `${equalHeight}px` } : undefined}
-      className={`py-4 md:py-5 lg:py-6 px-5 md:px-6 lg:px-8 rounded-2xl backdrop-blur-md border transition-all duration-300 ${
+      className={`py-[3vh] md:py-[2.5vh] lg:py-[2vh] px-[4vw] md:px-[3vw] lg:px-[2vw] min-h-[12vh] md:min-h-[10vh] rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col justify-center ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
@@ -26,14 +26,14 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
           : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
     >
-      <span className={`inline-block px-2.5 py-1 rounded text-xs md:text-sm font-bold mb-2 md:mb-2.5 lg:mb-3 ${
+      <span className={`inline-block px-2.5 py-1 rounded text-[clamp(0.7rem,1.5vw,0.875rem)] font-bold mb-[1vh] ${
         selected
           ? 'bg-[#1e3a5f] text-white'
           : 'bg-white/20 text-white/80'
       }`}>
         {label}
       </span>
-      <span className="font-medium text-base md:text-lg lg:text-xl leading-snug block">{text}</span>
+      <span className="font-medium text-[clamp(0.95rem,2vw,1.25rem)] leading-snug block">{text}</span>
     </button>
   )
 }
@@ -173,15 +173,15 @@ export default function QuestionCard({
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col p-4 md:p-6 overflow-y-auto">
+      <div className="relative z-10 flex-1 flex flex-col p-[2vh] md:p-[3vh] overflow-y-auto">
         {/* Step indicator */}
-        <div className="mb-3 md:mb-4 pt-2 flex-shrink-0">
+        <div className="mb-[1.5vh] pt-[1vh] flex-shrink-0">
           <StepIndicator current={questionNumber} total={totalQuestions} />
         </div>
 
         {/* Question section with typewriter */}
-        <div className="mb-4 md:mb-6 text-center px-4 flex-shrink-0">
-          <h2 className="font-display text-xl md:text-2xl lg:text-3xl font-semibold text-white leading-relaxed max-w-2xl mx-auto drop-shadow-lg">
+        <div className="mb-[2vh] text-center px-4 flex-shrink-0">
+          <h2 className="font-display text-[clamp(1.25rem,3.5vw,2rem)] font-semibold text-white leading-relaxed max-w-[90vw] md:max-w-[80vw] lg:max-w-2xl mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (
               <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
@@ -190,13 +190,13 @@ export default function QuestionCard({
         </div>
 
         {/* Options - Dynamic layout based on count */}
-        <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12 min-h-0">
+        <div className="flex-1 flex items-center justify-center px-[3vw] min-h-0">
           <div
             ref={gridRef}
-            className={`grid w-full gap-3 md:gap-4 ${
+            className={`grid w-full gap-[1.5vh] md:gap-[2vh] ${
               options.length === 3
-                ? 'grid-cols-1 max-w-md md:max-w-xl lg:max-w-2xl'
-                : 'grid-cols-2 max-w-lg md:max-w-2xl lg:max-w-4xl'
+                ? 'grid-cols-1 max-w-[85vw] md:max-w-[70vw] lg:max-w-[50vw]'
+                : 'grid-cols-2 max-w-[92vw] md:max-w-[85vw] lg:max-w-[70vw]'
             }`}
           >
             {options.map((option, index) => (
@@ -215,7 +215,7 @@ export default function QuestionCard({
         </div>
 
         {/* Navigation buttons */}
-        <div className={`mt-4 md:mt-6 max-w-xl mx-auto w-full px-4 pb-3 md:pb-4 flex-shrink-0 transition-all duration-300 ${
+        <div className={`mt-[2vh] max-w-[85vw] md:max-w-[70vw] lg:max-w-xl mx-auto w-full px-4 pb-[1.5vh] flex-shrink-0 transition-all duration-300 ${
           showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}>
           {children}
