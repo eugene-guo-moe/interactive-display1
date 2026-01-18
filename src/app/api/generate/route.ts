@@ -91,7 +91,6 @@ function buildPrompt(answers: QuizAnswers): string {
 interface GenerateRequest {
   photo: string // base64 image data
   answers: QuizAnswers
-  generationMethod?: 'v1' | 'v2' // v1 = face swap, v2 = inpainting
 }
 
 export async function POST(request: NextRequest) {
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: GenerateRequest = await request.json()
-    const { photo, answers, generationMethod = 'v1' } = body
+    const { photo, answers } = body
 
     // Validate photo size (base64 string length)
     if (!photo || photo.length > MAX_PHOTO_SIZE) {
@@ -124,26 +123,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate generation method
-    if (generationMethod !== 'v1' && generationMethod !== 'v2') {
-      return NextResponse.json(
-        { error: 'Invalid generation method' },
-        { status: 400 }
-      )
-    }
-
     // Build the scene prompt based on answers
     const prompt = buildPrompt(answers)
     const timePeriod = answers.q3 === 'A' ? 'past' : answers.q3 === 'B' ? 'present' : 'future'
 
-    // Choose endpoint based on generation method
-    // v1 = face swap pipeline (original)
-    // v2 = inpainting pipeline (preserves user's actual appearance)
-    const endpoint = generationMethod === 'v2' ? '/generate-v2' : '/generate'
-    console.log(`Using generation method: ${generationMethod} (${endpoint})`)
-
     // Call the Cloudflare Worker with API key authentication
-    const workerResponse = await fetch(`${WORKER_URL}${endpoint}`, {
+    const workerResponse = await fetch(`${WORKER_URL}/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -173,7 +158,6 @@ export async function POST(request: NextRequest) {
       prompt,
       timePeriod,
       mode: 'production',
-      generationMethod,
     })
   } catch (error) {
     console.error('Generate API error:', error)
