@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useQuiz } from '@/context/QuizContext'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { triviaQuestions, shuffleQuestions, TriviaQuestion } from '@/lib/triviaQuestions'
 
 const loadingSteps = [
   { text: 'Preparing your photo', description: 'Analyzing image quality' },
@@ -11,42 +12,12 @@ const loadingSteps = [
   { text: 'Final touches', description: 'Polishing the details' },
 ]
 
-const funFactsPast = [
-  'Singapore was founded as a British trading post in 1819 by Sir Stamford Raffles.',
-  'The iconic Merlion statue was first unveiled in 1972 at the mouth of the Singapore River.',
-  'Kampong Glam was once home to the Malay royalty and is now a vibrant heritage district.',
-  'The old National Library on Stamford Road opened in 1960 and became a beloved landmark.',
-  'Singapore\'s first cinema, the Alhambra, opened in 1907 along Beach Road.',
-  'The Singapore River was once so polluted that no fish could survive in it until a major cleanup in the 1980s.',
-  'Haw Par Villa, built in 1937, features over 1,000 statues depicting Chinese folklore.',
-]
-
-const funFactsPresent = [
-  'Singapore is home to over 5.6 million people across 63 islands.',
-  'Changi Airport has been voted the world\'s best airport for 12 consecutive years.',
-  'Singapore has over 80 hawker centres serving affordable local food.',
-  'The Singapore Botanic Gardens is a UNESCO World Heritage Site since 2015.',
-  'Gardens by the Bay spans 101 hectares and features the world\'s tallest indoor waterfall.',
-  'Singapore has one of the lowest crime rates in the world.',
-  'The MRT system carries over 3 million passengers daily across 6 lines.',
-]
-
-const funFactsFuture = [
-  'Singapore aims to be a Smart Nation with AI-powered services by 2030.',
-  'The city plans to have 80% of buildings be green-certified by 2030.',
-  'Autonomous vehicles are being tested on Singapore roads for future transport.',
-  'Singapore is developing floating solar farms to boost renewable energy.',
-  'The Tuas Mega Port will be the world\'s largest fully automated terminal when completed.',
-  'Singapore plans to phase out petrol and diesel vehicles by 2040.',
-  'Underground spaces are being developed to free up land for parks and housing.',
-]
-
 const stepDurations = [12000, 35000, 30000, 13000] // Total: 90 seconds
 
 const backgroundImages = {
-  past: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80', // Chinatown Singapore
-  present: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80', // Marina Bay Sands
-  future: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80', // TRON-style light trails
+  past: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80',
+  present: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
+  future: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
 }
 
 export default function LoadingPage() {
@@ -54,21 +25,48 @@ export default function LoadingPage() {
   const { photoData, answers, setResultImageUrl, getTimePeriod, generationMethod } = useQuiz()
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
-  const [currentFact, setCurrentFact] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const hasStarted = useRef(false)
   const isComplete = useRef(false)
 
-  const timePeriod = getTimePeriod()
-  const funFacts = timePeriod === 'past' ? funFactsPast : timePeriod === 'present' ? funFactsPresent : funFactsFuture
+  // Trivia state
+  const [shuffledQuestions, setShuffledQuestions] = useState<TriviaQuestion[]>([])
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
+  const [score, setScore] = useState(0)
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [questionsAnswered, setQuestionsAnswered] = useState(0)
 
-  // Rotate fun facts
+  const timePeriod = getTimePeriod()
+  const backgroundImage = backgroundImages[timePeriod as keyof typeof backgroundImages] || backgroundImages.present
+
+  // Shuffle questions on mount
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentFact(prev => (prev + 1) % funFacts.length)
-    }, 6000)
-    return () => clearInterval(interval)
-  }, [funFacts.length])
+    setShuffledQuestions(shuffleQuestions(triviaQuestions))
+  }, [])
+
+  const currentQuestion = shuffledQuestions[currentQuestionIndex]
+
+  // Handle answer selection
+  const handleAnswerSelect = (answer: string) => {
+    if (showFeedback) return // Prevent multiple selections
+
+    setSelectedAnswer(answer)
+    setShowFeedback(true)
+
+    const isCorrect = answer === currentQuestion.correctAnswer
+    if (isCorrect) {
+      setScore(prev => prev + 1)
+    }
+    setQuestionsAnswered(prev => prev + 1)
+
+    // Auto-advance to next question after delay
+    setTimeout(() => {
+      setSelectedAnswer(null)
+      setShowFeedback(false)
+      setCurrentQuestionIndex(prev => (prev + 1) % shuffledQuestions.length)
+    }, 1500)
+  }
 
   useEffect(() => {
     // Redirect if no photo data
@@ -82,8 +80,8 @@ export default function LoadingPage() {
     hasStarted.current = true
 
     // Start slow progress animation (runs for 85 seconds to ~90%)
-    const totalDuration = 85000 // 85 seconds
-    const maxProgress = 90 // Only go to 90% until done
+    const totalDuration = 85000
+    const maxProgress = 90
     const startTime = Date.now()
 
     const animateProgress = () => {
@@ -114,7 +112,6 @@ export default function LoadingPage() {
     // Start the image generation process
     async function generateImage() {
       try {
-        // Call the actual API
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: {
@@ -171,12 +168,9 @@ export default function LoadingPage() {
   const circumference = 2 * Math.PI * circleRadius
   const strokeDashoffset = circumference - (progress / 100) * circumference
 
-  const backgroundImage = backgroundImages[timePeriod as keyof typeof backgroundImages] || backgroundImages.present
-
   if (error) {
     return (
       <div className="relative flex-1 flex flex-col items-center justify-center p-8 page-transition">
-        {/* Background image */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
           style={{ backgroundImage: `url(${backgroundImage})` }}
@@ -219,47 +213,44 @@ export default function LoadingPage() {
       <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 
       {/* Circular progress - Minimal Ring */}
-      <div className="relative z-10 mb-8">
-        <svg width="180" height="180" className="-rotate-90">
-          {/* Background circle */}
+      <div className="relative z-10 mb-6">
+        <svg width="140" height="140" className="-rotate-90">
           <circle
-            cx="90"
-            cy="90"
-            r={circleRadius}
+            cx="70"
+            cy="70"
+            r="60"
             fill="none"
             stroke="rgba(255,255,255,0.05)"
             strokeWidth="2"
           />
-          {/* Progress circle */}
           <circle
-            cx="90"
-            cy="90"
-            r={circleRadius}
+            cx="70"
+            cy="70"
+            r="60"
             fill="none"
             stroke="rgba(255,255,255,0.8)"
             strokeWidth="2"
             strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
+            strokeDasharray={2 * Math.PI * 60}
+            strokeDashoffset={2 * Math.PI * 60 - (progress / 100) * 2 * Math.PI * 60}
             className="transition-all duration-300"
           />
         </svg>
-        {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-4xl font-semibold text-white">
+          <span className="font-display text-3xl font-semibold text-white">
             {Math.round(progress)}%
           </span>
         </div>
       </div>
 
       {/* Title */}
-      <h2 className="relative z-10 font-display text-xl font-medium text-white mb-2 text-center">
+      <h2 className="relative z-10 font-display text-lg font-medium text-white mb-1 text-center">
         Creating your moment
       </h2>
-      <p className="relative z-10 text-white/40 text-sm mb-8">{loadingSteps[currentStep].text}</p>
+      <p className="relative z-10 text-white/40 text-sm mb-6">{loadingSteps[currentStep].text}</p>
 
-      {/* Step dots - minimal */}
-      <div className="relative z-10 flex gap-3 mb-10">
+      {/* Step dots */}
+      <div className="relative z-10 flex gap-3 mb-6">
         {loadingSteps.map((_, i) => (
           <div
             key={i}
@@ -272,26 +263,65 @@ export default function LoadingPage() {
         ))}
       </div>
 
-      {/* Fun fact card - minimal */}
-      <div className="relative z-10 max-w-sm w-full p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
-        <p className="text-[11px] text-white/30 mb-2 tracking-widest uppercase">Did you know?</p>
-        <p className="text-sm text-white/50 leading-relaxed transition-opacity duration-500">
-          {funFacts[currentFact]}
-        </p>
-        {/* Fact indicators */}
-        <div className="flex justify-center gap-1.5 mt-4">
-          {funFacts.map((_, index) => (
-            <div
-              key={index}
-              className={`h-1 rounded-full transition-all duration-300 ${
-                index === currentFact
-                  ? 'w-5 bg-white/60'
-                  : 'w-1.5 bg-white/10'
-              }`}
-            />
-          ))}
+      {/* Trivia Quiz Card */}
+      {currentQuestion && (
+        <div className="relative z-10 max-w-sm w-full p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[11px] text-white/30 tracking-widest uppercase">
+              Test your Singapore knowledge!
+            </p>
+            <p className="text-sm font-medium text-white/60">
+              {score}/{questionsAnswered}
+            </p>
+          </div>
+
+          {/* Question */}
+          <p className="text-sm text-white/80 font-medium mb-4 leading-relaxed">
+            {currentQuestion.question}
+          </p>
+
+          {/* Options */}
+          <div className="space-y-2">
+            {currentQuestion.options.map((option) => {
+              const isSelected = selectedAnswer === option.label
+              const isCorrect = option.label === currentQuestion.correctAnswer
+              const showCorrect = showFeedback && isCorrect
+              const showWrong = showFeedback && isSelected && !isCorrect
+
+              return (
+                <button
+                  key={option.label}
+                  onClick={() => handleAnswerSelect(option.label)}
+                  disabled={showFeedback}
+                  className={`w-full text-left p-3 rounded-xl border transition-all duration-200 ${
+                    showCorrect
+                      ? 'bg-green-500/20 border-green-500/50 text-green-300'
+                      : showWrong
+                      ? 'bg-red-500/20 border-red-500/50 text-red-300'
+                      : isSelected
+                      ? 'bg-white/10 border-white/30 text-white'
+                      : 'bg-white/[0.02] border-white/[0.06] text-white/60 hover:bg-white/[0.05] hover:border-white/10'
+                  } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                      showCorrect
+                        ? 'bg-green-500/30 text-green-300'
+                        : showWrong
+                        ? 'bg-red-500/30 text-red-300'
+                        : 'bg-white/10 text-white/60'
+                    }`}>
+                      {option.label}
+                    </span>
+                    <span className="text-sm">{option.text}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

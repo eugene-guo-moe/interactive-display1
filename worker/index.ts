@@ -23,7 +23,7 @@ export interface Env {
 interface GenerateRequest {
   photo: string // base64 image data (with or without prefix)
   prompt: string
-  timePeriod: 'past' | 'future'
+  timePeriod: 'past' | 'present' | 'future'
 }
 
 interface GenerateResponse {
@@ -162,7 +162,7 @@ async function inpaintBackground(
 // Generate scene with a person using FAL.ai Flux
 async function generateSceneWithPerson(
   prompt: string,
-  timePeriod: 'past' | 'future',
+  timePeriod: 'past' | 'present' | 'future',
   gender: 'male' | 'female',
   apiKey: string
 ): Promise<string> {
