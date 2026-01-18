@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, useRef } from 'react'
 
 interface OptionProps {
   label: string
@@ -8,12 +8,16 @@ interface OptionProps {
   selected: boolean
   onClick: () => void
   visible: boolean
+  setRef?: (el: HTMLButtonElement | null) => void
+  equalHeight?: number | null
 }
 
-function Option({ label, text, selected, onClick, visible }: OptionProps) {
+function Option({ label, text, selected, onClick, visible, setRef, equalHeight }: OptionProps) {
   return (
     <button
+      ref={setRef}
       onClick={onClick}
+      style={equalHeight ? { height: `${equalHeight}px` } : undefined}
       className={`p-5 md:p-8 lg:p-10 rounded-2xl backdrop-blur-md border transition-all duration-300 min-h-[88px] md:min-h-[120px] ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
@@ -81,6 +85,76 @@ export default function QuestionCard({
   const [showOptions, setShowOptions] = useState<number[]>([])
   const [typingComplete, setTypingComplete] = useState(false)
   const [showBackButton, setShowBackButton] = useState(false)
+  const [equalHeight, setEqualHeight] = useState<number | null>(null)
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const gridRef = useRef<HTMLDivElement | null>(null)
+
+  // Calculate equal height for all options
+  useEffect(() => {
+    // Reset height when question changes
+    setEqualHeight(null)
+    optionRefs.current = []
+  }, [questionNumber])
+
+  useEffect(() => {
+    const measureAndSetHeight = () => {
+      const grid = gridRef.current
+      if (!grid) return
+
+      // First, reset heights and set grid to not stretch items
+      setEqualHeight(null)
+      grid.style.alignItems = 'start'
+
+      // Use double rAF to ensure DOM has painted with natural heights
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const heights = optionRefs.current
+            .filter(ref => ref !== null)
+            .map(ref => ref!.offsetHeight)
+          if (heights.length > 0) {
+            const maxHeight = Math.max(...heights)
+            setEqualHeight(maxHeight)
+          }
+          // Restore grid alignment
+          grid.style.alignItems = ''
+        })
+      })
+    }
+
+    // Wait until all options are visible, then measure
+    if (showOptions.length === options.length) {
+      // Extra delay to ensure animations have started and elements are measurable
+      const timer = setTimeout(measureAndSetHeight, 100)
+
+      // Also handle resize
+      const handleResize = () => {
+        const grid = gridRef.current
+        if (!grid) return
+
+        setEqualHeight(null)
+        grid.style.alignItems = 'start'
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const heights = optionRefs.current
+              .filter(ref => ref !== null)
+              .map(ref => ref!.offsetHeight)
+            if (heights.length > 0) {
+              const maxHeight = Math.max(...heights)
+              setEqualHeight(maxHeight)
+            }
+            grid.style.alignItems = ''
+          })
+        })
+      }
+
+      window.addEventListener('resize', handleResize)
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('resize', handleResize)
+      }
+    }
+  }, [showOptions.length, options.length])
 
   // Typewriter effect
   useEffect(() => {
@@ -137,11 +211,14 @@ export default function QuestionCard({
 
         {/* Options - Dynamic layout based on count */}
         <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12">
-          <div className={`grid gap-4 md:gap-6 lg:gap-8 w-full ${
-            options.length === 3
-              ? 'grid-cols-1 max-w-lg'
-              : 'grid-cols-2 max-w-xl lg:max-w-3xl'
-          }`}>
+          <div
+            ref={gridRef}
+            className={`grid gap-4 md:gap-6 lg:gap-8 w-full ${
+              options.length === 3
+                ? 'grid-cols-1 max-w-lg'
+                : 'grid-cols-2 max-w-xl lg:max-w-3xl'
+            }`}
+          >
             {options.map((option, index) => (
               <Option
                 key={option.label}
@@ -150,6 +227,8 @@ export default function QuestionCard({
                 selected={selectedAnswer === option.label}
                 onClick={() => onSelect(option.label)}
                 visible={showOptions.includes(index)}
+                setRef={(el) => { optionRefs.current[index] = el }}
+                equalHeight={equalHeight}
               />
             ))}
           </div>
