@@ -263,62 +263,83 @@ export default function LoadingPage() {
         ))}
       </div>
 
-      {/* Trivia Quiz Card */}
+      {/* Trivia Quiz Section */}
       {currentQuestion && (
-        <div className="relative z-10 max-w-sm w-full p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[11px] text-white/30 tracking-widest uppercase">
-              Test your Singapore knowledge!
+        <div className="relative z-10 max-w-sm w-full">
+          {/* Section Header */}
+          <h3 className="text-center text-white/70 text-sm font-medium mb-3">
+            Test your Singapore knowledge while waiting!
+          </h3>
+
+          {/* Quiz Card */}
+          <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
+            {/* Score */}
+            <div className="flex items-center justify-end mb-3">
+              <p className="text-sm font-medium text-white/60">
+                Score: {score}/{questionsAnswered}
+              </p>
+            </div>
+
+            {/* Question */}
+            <p className="text-sm text-white/80 font-medium mb-4 leading-relaxed">
+              {currentQuestion.question}
             </p>
-            <p className="text-sm font-medium text-white/60">
-              {score}/{questionsAnswered}
-            </p>
-          </div>
 
-          {/* Question */}
-          <p className="text-sm text-white/80 font-medium mb-4 leading-relaxed">
-            {currentQuestion.question}
-          </p>
+            {/* Options */}
+            <div className="space-y-2">
+              {currentQuestion.options.map((option) => {
+                const isSelected = selectedAnswer === option.label
+                const isCorrect = option.label === currentQuestion.correctAnswer
+                const showCorrect = showFeedback && isCorrect
+                const showWrong = showFeedback && isSelected && !isCorrect
 
-          {/* Options */}
-          <div className="space-y-2">
-            {currentQuestion.options.map((option) => {
-              const isSelected = selectedAnswer === option.label
-              const isCorrect = option.label === currentQuestion.correctAnswer
-              const showCorrect = showFeedback && isCorrect
-              const showWrong = showFeedback && isSelected && !isCorrect
-
-              return (
-                <button
-                  key={option.label}
-                  onClick={() => handleAnswerSelect(option.label)}
-                  disabled={showFeedback}
-                  className={`w-full text-left p-3 rounded-xl border transition-all duration-200 ${
-                    showCorrect
-                      ? 'bg-green-500/20 border-green-500/50 text-green-300'
-                      : showWrong
-                      ? 'bg-red-500/20 border-red-500/50 text-red-300'
-                      : isSelected
-                      ? 'bg-white/10 border-white/30 text-white'
-                      : 'bg-white/[0.02] border-white/[0.06] text-white/60 hover:bg-white/[0.05] hover:border-white/10'
-                  } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                return (
+                  <button
+                    key={option.label}
+                    onClick={() => handleAnswerSelect(option.label)}
+                    disabled={showFeedback}
+                    className={`w-full text-left p-3 rounded-xl border transition-all duration-200 ${
                       showCorrect
-                        ? 'bg-green-500/30 text-green-300'
+                        ? 'bg-green-500/20 border-green-500/50 text-green-300'
                         : showWrong
-                        ? 'bg-red-500/30 text-red-300'
-                        : 'bg-white/10 text-white/60'
-                    }`}>
-                      {option.label}
+                        ? 'bg-red-500/20 border-red-500/50 text-red-300'
+                        : isSelected
+                        ? 'bg-white/10 border-white/30 text-white'
+                        : 'bg-white/[0.02] border-white/[0.06] text-white/60 hover:bg-white/[0.05] hover:border-white/10'
+                    } ${showFeedback ? 'cursor-default' : 'cursor-pointer'}`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                        showCorrect
+                          ? 'bg-green-500/30 text-green-300'
+                          : showWrong
+                          ? 'bg-red-500/30 text-red-300'
+                          : 'bg-white/10 text-white/60'
+                      }`}>
+                        {option.label}
+                      </span>
+                      <span className="text-sm">{option.text}</span>
                     </span>
-                    <span className="text-sm">{option.text}</span>
-                  </span>
-                </button>
-              )
-            })}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Question Progress Dots */}
+            <div className="flex justify-center gap-1 mt-4 flex-wrap max-w-[280px] mx-auto">
+              {shuffledQuestions.map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                    i === currentQuestionIndex
+                      ? 'bg-white/90 scale-125'
+                      : i < currentQuestionIndex
+                      ? 'bg-white/40'
+                      : 'bg-white/15'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
