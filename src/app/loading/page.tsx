@@ -26,8 +26,10 @@ export default function LoadingPage() {
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [timedOut, setTimedOut] = useState(false)
   const hasStarted = useRef(false)
   const isComplete = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Trivia state
   const [shuffledQuestions, setShuffledQuestions] = useState<TriviaQuestion[]>([])
@@ -109,9 +111,22 @@ export default function LoadingPage() {
 
     requestAnimationFrame(animateProgress)
 
+    // Set up timeout for 90 seconds
+    const timeoutId = setTimeout(() => {
+      if (!isComplete.current) {
+        setTimedOut(true)
+        // Abort the ongoing fetch request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+        }
+      }
+    }, 90000)
+
     // Start the image generation process
     async function generateImage() {
       try {
+        abortControllerRef.current = new AbortController()
+
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: {
@@ -122,6 +137,7 @@ export default function LoadingPage() {
             answers: answers,
             generationMethod: generationMethod,
           }),
+          signal: abortControllerRef.current.signal,
         })
 
         if (!response.ok) {
@@ -132,6 +148,7 @@ export default function LoadingPage() {
         const data = await response.json()
 
         // Mark as complete and jump to 100%
+        clearTimeout(timeoutId)
         isComplete.current = true
         setResultImageUrl(data.imageUrl)
         setProgress(100)
@@ -142,6 +159,10 @@ export default function LoadingPage() {
           router.push('/result')
         }, 500)
       } catch (err) {
+        // Ignore abort errors (they're expected when we timeout)
+        if (err instanceof Error && err.name === 'AbortError') {
+          return
+        }
         console.error('Generation error:', err)
         isComplete.current = true
         setError('Something went wrong. Please try again.')
@@ -149,11 +170,17 @@ export default function LoadingPage() {
     }
 
     generateImage()
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
   }, [photoData, answers, router, setResultImageUrl, generationMethod])
 
   const handleRetry = () => {
     hasStarted.current = false
+    isComplete.current = false
     setError(null)
+    setTimedOut(false)
     setProgress(0)
     setCurrentStep(0)
     window.location.reload()
@@ -167,6 +194,41 @@ export default function LoadingPage() {
   const circleRadius = 70
   const circumference = 2 * Math.PI * circleRadius
   const strokeDashoffset = circumference - (progress / 100) * circumference
+
+  if (timedOut) {
+    return (
+      <div className="relative flex-1 flex flex-col items-center justify-center p-8 page-transition">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+        <div className="relative z-10 rounded-2xl p-10 text-center max-w-md bg-white/[0.03] border border-white/10 backdrop-blur-sm">
+          <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
+            <svg className="w-10 h-10 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="font-display text-2xl font-semibold text-white mb-3">Taking longer than expected</h2>
+          <p className="text-white/40 mb-8">The image is taking a while to generate. Would you like to try again?</p>
+          <div className="flex gap-3">
+            <button
+              onClick={handleStartOver}
+              className="btn-press flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-medium hover:bg-white/10 hover:border-white/20 transition-all"
+            >
+              Start Over
+            </button>
+            <button
+              onClick={handleRetry}
+              className="btn-press flex-1 py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold hover:bg-white/90 transition-all"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (error) {
     return (
