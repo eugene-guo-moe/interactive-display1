@@ -18,7 +18,7 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
       ref={setRef}
       onClick={onClick}
       style={equalHeight ? { height: `${equalHeight}px` } : undefined}
-      className={`py-4 md:py-5 lg:py-6 xl:py-7 2xl:py-8 px-5 md:px-6 lg:px-7 xl:px-8 2xl:px-10 rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col items-center justify-center ${
+      className={`py-4 landscape:py-2 md:py-5 md:landscape:py-3 lg:py-6 lg:landscape:py-4 xl:py-7 2xl:py-8 px-5 md:px-6 lg:px-7 xl:px-8 2xl:px-10 rounded-2xl backdrop-blur-md border transition-all duration-300 flex flex-col items-center justify-center ${
         visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       } ${
         selected
@@ -26,14 +26,14 @@ function Option({ label, text, selected, onClick, visible, setRef, equalHeight }
           : 'bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40'
       }`}
     >
-      <span className={`inline-flex items-center justify-center w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 rounded text-xs md:text-sm font-bold mb-2 md:mb-3 ${
+      <span className={`inline-flex items-center justify-center w-6 h-6 md:w-7 md:h-7 xl:w-8 xl:h-8 rounded text-xs md:text-sm font-bold mb-2 landscape:mb-1 md:mb-3 md:landscape:mb-2 ${
         selected
           ? 'bg-[#1e3a5f] text-white'
           : 'bg-white/20 text-white/80'
       }`}>
         {label}
       </span>
-      <span className="font-medium text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl leading-snug block text-center">{text}</span>
+      <span className="font-medium text-sm landscape:text-xs md:text-base md:landscape:text-sm lg:text-lg lg:landscape:text-base xl:text-xl 2xl:text-2xl leading-snug block text-center">{text}</span>
     </button>
   )
 }
@@ -173,15 +173,15 @@ export default function QuestionCard({
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col p-4 md:p-6 lg:p-8 xl:p-10 2xl:p-12 overflow-y-auto">
+      <div className="relative z-10 flex-1 flex flex-col p-4 landscape:p-2 md:p-6 md:landscape:p-4 lg:p-8 lg:landscape:p-5 xl:p-10 2xl:p-12 overflow-y-auto">
         {/* Step indicator */}
-        <div className="mb-4 md:mb-5 lg:mb-6 pt-2 flex-shrink-0">
+        <div className="mb-4 landscape:mb-2 md:mb-5 md:landscape:mb-3 lg:mb-6 lg:landscape:mb-4 pt-2 landscape:pt-1 flex-shrink-0">
           <StepIndicator current={questionNumber} total={totalQuestions} />
         </div>
 
         {/* Question section with typewriter */}
-        <div className="mb-4 md:mb-6 lg:mb-8 text-center px-4 flex-shrink-0">
-          <h2 className="font-display text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-semibold text-white leading-relaxed max-w-2xl xl:max-w-3xl 2xl:max-w-4xl mx-auto drop-shadow-lg">
+        <div className="mb-4 landscape:mb-2 md:mb-6 md:landscape:mb-3 lg:mb-8 lg:landscape:mb-4 text-center px-4 flex-shrink-0">
+          <h2 className="font-display text-xl landscape:text-lg md:text-2xl md:landscape:text-xl lg:text-3xl lg:landscape:text-2xl xl:text-4xl 2xl:text-5xl font-semibold text-white leading-relaxed landscape:leading-snug max-w-2xl xl:max-w-3xl 2xl:max-w-4xl mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (
               <span className="inline-block w-[3px] h-[1em] bg-white/80 ml-1 animate-pulse" />
@@ -193,7 +193,7 @@ export default function QuestionCard({
         <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12">
           <div
             ref={gridRef}
-            className={`grid w-full gap-3 md:gap-4 lg:gap-5 ${
+            className={`grid w-full gap-3 landscape:gap-2 md:gap-4 md:landscape:gap-3 lg:gap-5 lg:landscape:gap-3 ${
               options.length === 3
                 ? 'grid-cols-1 max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl 2xl:max-w-3xl'
                 : 'grid-cols-2 max-w-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl 2xl:max-w-5xl'
@@ -215,7 +215,7 @@ export default function QuestionCard({
         </div>
 
         {/* Navigation buttons */}
-        <div className={`mt-4 md:mt-6 lg:mt-8 max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto w-full px-4 pb-4 md:pb-6 flex-shrink-0 transition-all duration-300 ${
+        <div className={`mt-4 landscape:mt-2 md:mt-6 md:landscape:mt-3 lg:mt-8 lg:landscape:mt-4 max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto w-full px-4 pb-4 landscape:pb-2 md:pb-6 md:landscape:pb-3 flex-shrink-0 transition-all duration-300 ${
           showBackButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}>
           {children}
