@@ -273,13 +273,6 @@ export default function LoadingPage() {
 
           {/* Quiz Card */}
           <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
-            {/* Score */}
-            <div className="flex items-center justify-end mb-3">
-              <p className="text-sm font-medium text-white/60">
-                Score: {score}/{questionsAnswered}
-              </p>
-            </div>
-
             {/* Question */}
             <p className="text-sm text-white/80 font-medium mb-4 leading-relaxed">
               {currentQuestion.question}
