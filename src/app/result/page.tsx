@@ -25,7 +25,7 @@ const phases = {
 
 export default function ResultPage() {
   const router = useRouter()
-  const { resultImageUrl, getTimePeriod, resetQuiz, photoData } = useQuiz()
+  const { resultImageUrl, qrUrl, getTimePeriod, resetQuiz, photoData } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
 
@@ -63,7 +63,8 @@ export default function ResultPage() {
     }
   }
 
-  const downloadUrl = resultImageUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/download/demo`
+  // Use qrUrl (R2 permanent URL) for QR code, fallback to resultImageUrl
+  const downloadUrl = qrUrl || resultImageUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/download/demo`
 
   return (
     <div className="relative flex-1 flex flex-col page-transition overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', backgroundColor: '#050505' }}>
@@ -111,7 +112,7 @@ export default function ResultPage() {
       </p>
 
       {/* Header */}
-      <div className="relative z-10 px-4 md:px-5 pt-2 pb-4 sm:pb-2 text-center shrink-0">
+      <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-4 sm:pb-2 text-center shrink-0">
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
@@ -131,7 +132,7 @@ export default function ResultPage() {
       </div>
 
       {/* Generated image */}
-      <div className="relative z-10 flex items-center justify-center px-3 shrink-0">
+      <div className="relative z-10 flex items-center justify-center px-3 pt-2 sm:pt-0 shrink-0">
         <div className="relative w-[85vw] max-w-sm md:max-w-md">
           {/* Decorative frame corners */}
           <div

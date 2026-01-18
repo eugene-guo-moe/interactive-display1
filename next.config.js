@@ -5,7 +5,15 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'riversidesec.eugene-ff3.workers.dev',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.vercel.app',
       },
     ],
   },
@@ -42,6 +50,21 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(self), microphone=(), geolocation=()'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' https://images.unsplash.com https://riversidesec.eugene-ff3.workers.dev data: blob:",
+              "connect-src 'self' https://riversidesec.eugene-ff3.workers.dev",
+              "media-src 'self' blob:",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; ')
           },
         ],
       },

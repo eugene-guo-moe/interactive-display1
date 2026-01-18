@@ -12,6 +12,49 @@ const MAX_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB max for base64 string
 const VALID_Q1_Q2_ANSWERS = ['A', 'B', 'C', 'D'] as const
 const VALID_Q3_ANSWERS = ['A', 'B', 'C'] as const
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5 // Max 5 requests per minute per IP
+
+// In-memory rate limiter (note: in edge runtime, this may not persist across instances)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+// Check rate limit for an IP
+function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+
+  // Clean up old entries periodically (simple garbage collection)
+  if (rateLimitMap.size > 10000) {
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (now > value.resetTime) {
+        rateLimitMap.delete(key)
+      }
+    }
+  }
+
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+    return { allowed: true }
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfter = Math.ceil((entry.resetTime - now) / 1000)
+    return { allowed: false, retryAfter }
+  }
+
+  entry.count++
+  return { allowed: true }
+}
+
+// Get client IP from request headers
+function getClientIP(request: NextRequest): string {
+  // Vercel/Cloudflare set these headers
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+         request.headers.get('x-real-ip') ||
+         'unknown'
+}
+
 // Validate quiz answers against whitelist
 function validateAnswers(answers: QuizAnswers): boolean {
   if (!answers.q1 || !answers.q2 || !answers.q3) return false
@@ -94,6 +137,21 @@ interface GenerateRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const clientIP = getClientIP(request)
+  const rateLimit = checkRateLimit(clientIP)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfter),
+        },
+      }
+    )
+  }
+
   try {
     // Check Content-Length header first (before parsing body)
     const contentLength = request.headers.get('content-length')

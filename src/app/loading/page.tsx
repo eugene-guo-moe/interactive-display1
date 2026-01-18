@@ -22,7 +22,7 @@ const backgroundImages = {
 
 export default function LoadingPage() {
   const router = useRouter()
-  const { photoData, answers, setResultImageUrl, getTimePeriod, generationMethod } = useQuiz()
+  const { photoData, answers, setResultImageUrl, setQrUrl, getTimePeriod, generationMethod } = useQuiz()
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -140,6 +140,7 @@ export default function LoadingPage() {
         // Mark as complete and jump to 100%
         isComplete.current = true
         setResultImageUrl(data.imageUrl)
+        setQrUrl(data.qrUrl || data.imageUrl) // Use R2 URL for QR, fallback to imageUrl
         setProgress(100)
         setCurrentStep(loadingSteps.length - 1)
 
@@ -201,7 +202,7 @@ export default function LoadingPage() {
       clearTimeout(retryTimeoutId)
       clearTimeout(finalTimeoutId)
     }
-  }, [photoData, answers, router, setResultImageUrl, generationMethod])
+  }, [photoData, answers, router, setResultImageUrl, setQrUrl, generationMethod])
 
   const handleRetry = () => {
     hasStarted.current = false
