@@ -29,6 +29,7 @@ export default function LoadingPage() {
   const [timedOut, setTimedOut] = useState(false)
   const hasStarted = useRef(false)
   const isComplete = useRef(false)
+  const retryCount = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Trivia state
@@ -111,19 +112,8 @@ export default function LoadingPage() {
 
     requestAnimationFrame(animateProgress)
 
-    // Set up timeout for 90 seconds
-    const timeoutId = setTimeout(() => {
-      if (!isComplete.current) {
-        setTimedOut(true)
-        // Abort the ongoing fetch request
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort()
-        }
-      }
-    }, 90000)
-
-    // Start the image generation process
-    async function generateImage() {
+    // Image generation function
+    async function generateImage(): Promise<boolean> {
       try {
         abortControllerRef.current = new AbortController()
 
@@ -148,7 +138,6 @@ export default function LoadingPage() {
         const data = await response.json()
 
         // Mark as complete and jump to 100%
-        clearTimeout(timeoutId)
         isComplete.current = true
         setResultImageUrl(data.imageUrl)
         setProgress(100)
@@ -158,27 +147,66 @@ export default function LoadingPage() {
         setTimeout(() => {
           router.push('/result')
         }, 500)
+
+        return true
       } catch (err) {
-        // Ignore abort errors (they're expected when we timeout)
+        // Ignore abort errors (they're expected when we auto-retry)
         if (err instanceof Error && err.name === 'AbortError') {
-          return
+          return false
         }
         console.error('Generation error:', err)
-        isComplete.current = true
-        setError('Something went wrong. Please try again.')
+        throw err
       }
     }
 
-    generateImage()
+    // Start initial generation
+    generateImage().catch((err) => {
+      if (!isComplete.current && retryCount.current === 0) {
+        // Will be handled by auto-retry at 80s
+        console.log('Initial generation failed, waiting for auto-retry')
+      } else {
+        isComplete.current = true
+        setError('Something went wrong. Please try again.')
+      }
+    })
+
+    // Auto-retry at 80 seconds if not complete
+    const retryTimeoutId = setTimeout(() => {
+      if (!isComplete.current && retryCount.current === 0) {
+        console.log('Auto-retrying at 80 seconds...')
+        retryCount.current = 1
+        // Abort the ongoing fetch request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+        }
+        // Start a new generation attempt
+        generateImage().catch(() => {
+          // Retry also failed, will be caught by final timeout
+        })
+      }
+    }, 80000)
+
+    // Final timeout at 90 seconds - show timeout UI
+    const finalTimeoutId = setTimeout(() => {
+      if (!isComplete.current) {
+        setTimedOut(true)
+        // Abort any ongoing fetch request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+        }
+      }
+    }, 90000)
 
     return () => {
-      clearTimeout(timeoutId)
+      clearTimeout(retryTimeoutId)
+      clearTimeout(finalTimeoutId)
     }
   }, [photoData, answers, router, setResultImageUrl, generationMethod])
 
   const handleRetry = () => {
     hasStarted.current = false
     isComplete.current = false
+    retryCount.current = 0
     setError(null)
     setTimedOut(false)
     setProgress(0)
