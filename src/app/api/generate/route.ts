@@ -147,17 +147,17 @@ function calculateProfile(answers: QuizAnswers): ProfileType {
 // Scene descriptions for each profile type
 // IMPORTANT: Prompts focus on a SINGLE PERSON (the user) to ensure PuLID preserves their face
 const profileScenes: Record<ProfileType, string> = {
-  guardian: 'a single person standing confidently in front of a Singapore Civil Defence training display, wearing a plain orange volunteer vest without any text or logos, emergency response equipment visible behind them at a modern HDB void deck, looking at the camera',
+  guardian: 'a single person standing confidently at a Singapore Police Force neighbourhood police post, wearing a smart casual polo shirt, community safety posters and a friendly service counter visible in the background, looking at the camera',
 
-  builder: 'a single person standing warmly in a Singapore HDB void deck decorated for a community event, potted plants and food tables visible in the background, golden hour sunlight streaming through, looking at the camera',
+  builder: 'a single person standing warmly at a Singapore community centre activity room, colourful event banners and chairs arranged for a gathering visible in the background, natural daylight streaming through windows, looking at the camera',
 
   shaper: 'a single person holding a glowing holographic tablet in futuristic Singapore, smart city architecture and digital displays in the background, autonomous vehicles on elevated roads behind them, looking at the camera',
 
-  'guardian-builder': 'a single person wearing a plain orange safety vest without any text or logos standing at a Singapore HDB community centre, safety equipment arranged in the background, looking at the camera',
+  'guardian-builder': 'a single person organizing supplies at a Singapore community food bank, shelves stocked with groceries and donation boxes visible in the background, warm indoor lighting, looking at the camera',
 
-  'builder-shaper': 'a single person holding a tablet at a smart community hub in Singapore, digital screens and modern HDB architecture visible in the background, looking at the camera',
+  'builder-shaper': 'a single person patiently teaching an elderly resident to use a smartphone at a Singapore community centre, comfortable seating and learning materials visible in the background, warm friendly atmosphere, looking at the camera',
 
-  'adaptive-guardian': 'a single person standing at a modern Singapore emergency operations centre, futuristic dashboard screens showing city infrastructure behind them, Marina Bay skyline visible through windows, looking at the camera',
+  'adaptive-guardian': 'a single person standing at a modern cybersecurity operations centre, multiple screens displaying network monitoring dashboards and security alerts behind them, blue ambient lighting, looking at the camera',
 }
 
 const profileStyles: Record<ProfileType, string> = {
