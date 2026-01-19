@@ -1,25 +1,35 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useQuiz } from '@/context/QuizContext'
+import { useQuiz, ProfileType } from '@/context/QuizContext'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 
-const phases = {
-  past: {
-    image: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80',
-    overlay: 'rgba(26, 16, 8, 0.6)',
-    color: '#D4A574',
+// Profile styling configuration
+const profileStyles: Record<ProfileType, { image: string; color: string }> = {
+  guardian: {
+    image: 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
+    color: '#F59E0B', // Amber
   },
-  present: {
+  builder: {
     image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
-    overlay: 'rgba(8, 26, 26, 0.5)',
-    color: '#7DD3C0',
+    color: '#10B981', // Emerald
   },
-  future: {
+  shaper: {
     image: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
-    overlay: 'rgba(10, 15, 30, 0.45)',
-    color: '#93C5FD',
+    color: '#6366F1', // Indigo
+  },
+  'guardian-builder': {
+    image: 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
+    color: '#F59E0B', // Amber
+  },
+  'builder-shaper': {
+    image: 'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=1920&q=80',
+    color: '#14B8A6', // Teal
+  },
+  'adaptive-guardian': {
+    image: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
+    color: '#8B5CF6', // Violet
   },
 }
 
@@ -28,14 +38,15 @@ const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
 
 export default function ResultPage() {
   const router = useRouter()
-  const { resultImageUrl, qrUrl, setQrUrl, r2Path, getTimePeriod, resetQuiz, photoData } = useQuiz()
+  const { resultImageUrl, qrUrl, setQrUrl, r2Path, getProfile, getProfileType, resetQuiz, photoData } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [r2Url, setR2Url] = useState<string | null>(null)
   const [uploadingToR2, setUploadingToR2] = useState(false)
 
-  const timePeriod = getTimePeriod()
-  const currentPhase = phases[timePeriod as keyof typeof phases] || phases.present
+  const profile = getProfile()
+  const profileType = getProfileType()
+  const currentStyle = profileStyles[profileType] || profileStyles.builder
 
   // Use FAL.ai URL for display (fast CDN)
   const displayImageUrl = resultImageUrl || photoData
@@ -68,7 +79,7 @@ export default function ResultPage() {
           body: JSON.stringify({
             falUrl: resultImageUrl,
             r2Path: r2Path,
-            timePeriod: timePeriod,
+            timePeriod: profileType, // Using profileType for R2 organization
           }),
         })
 
@@ -85,7 +96,7 @@ export default function ResultPage() {
     }
 
     uploadToR2()
-  }, [resultImageUrl, r2Path, r2Url, uploadingToR2, timePeriod, setQrUrl])
+  }, [resultImageUrl, r2Path, r2Url, uploadingToR2, profileType, setQrUrl])
 
   const handleStartOver = () => {
     resetQuiz()
@@ -116,11 +127,11 @@ export default function ResultPage() {
           }}
         />
       )}
-      {/* Fallback to phase image if no generated image */}
+      {/* Fallback to profile image if no generated image */}
       {!displayImageUrl && (
         <div
           className="fixed inset-[-5%] bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${currentPhase.image})` }}
+          style={{ backgroundImage: `url(${currentStyle.image})` }}
         />
       )}
       {/* Dark overlay */}
@@ -132,7 +143,7 @@ export default function ResultPage() {
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at 50% 40%, ${currentPhase.color}25 0%, transparent 60%)`
+          background: `radial-gradient(circle at 50% 40%, ${currentStyle.color}25 0%, transparent 60%)`
         }}
       />
       {/* Vignette effect */}
@@ -148,23 +159,20 @@ export default function ResultPage() {
         RIVERSIDE SECONDARY SCHOOL, SINGAPORE
       </p>
 
-      {/* Header */}
-      <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-4 sm:pb-2 text-center shrink-0">
+      {/* Profile Header */}
+      <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-2 text-center shrink-0">
+        <div className="text-3xl sm:text-4xl mb-2">{profile.emoji}</div>
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
-            color: currentPhase.color,
-            textShadow: `0 0 40px ${currentPhase.color}40`
+            color: currentStyle.color,
+            textShadow: `0 0 40px ${currentStyle.color}40`
           }}
         >
-          {timePeriod === 'past' ? 'Your Singapore Heritage' : timePeriod === 'present' ? 'Your Singapore Today' : 'Your Singapore Future'}
+          {profile.title}
         </h1>
-        <p className="text-white/50 text-sm">
-          {timePeriod === 'past'
-            ? 'A glimpse into the warmth of kampung days'
-            : timePeriod === 'present'
-              ? 'Celebrating the vibrant Singapore of now'
-              : 'Welcome to tomorrow\'s smart nation'}
+        <p className="text-white/70 text-sm md:text-base max-w-md mx-auto italic">
+          &ldquo;{profile.tagline}&rdquo;
         </p>
       </div>
 
@@ -174,27 +182,27 @@ export default function ResultPage() {
           {/* Decorative frame corners */}
           <div
             className="absolute -top-2 -left-2 w-8 h-8 border-l-2 border-t-2 rounded-tl-lg"
-            style={{ borderColor: `${currentPhase.color}B0` }}
+            style={{ borderColor: `${currentStyle.color}B0` }}
           />
           <div
             className="absolute -top-2 -right-2 w-8 h-8 border-r-2 border-t-2 rounded-tr-lg"
-            style={{ borderColor: `${currentPhase.color}B0` }}
+            style={{ borderColor: `${currentStyle.color}B0` }}
           />
           <div
             className="absolute -bottom-2 -left-2 w-8 h-8 border-l-2 border-b-2 rounded-bl-lg"
-            style={{ borderColor: `${currentPhase.color}B0` }}
+            style={{ borderColor: `${currentStyle.color}B0` }}
           />
           <div
             className="absolute -bottom-2 -right-2 w-8 h-8 border-r-2 border-b-2 rounded-br-lg"
-            style={{ borderColor: `${currentPhase.color}B0` }}
+            style={{ borderColor: `${currentStyle.color}B0` }}
           />
 
           {/* Image container */}
           <div
             className="relative rounded-xl overflow-hidden shadow-2xl"
             style={{
-              boxShadow: `0 25px 50px -12px ${currentPhase.color}40`,
-              outline: `1px solid ${currentPhase.color}30`
+              boxShadow: `0 25px 50px -12px ${currentStyle.color}40`,
+              outline: `1px solid ${currentStyle.color}30`
             }}
           >
             {displayImageUrl ? (
@@ -203,7 +211,7 @@ export default function ResultPage() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[40vh] sm:max-h-[48vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-auto max-h-[35vh] sm:max-h-[40vh] object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
@@ -213,7 +221,7 @@ export default function ResultPage() {
                   <div className="absolute inset-0 bg-white/5 flex items-center justify-center">
                     <div
                       className="w-10 h-10 border-2 border-white/10 rounded-full animate-spin"
-                      style={{ borderTopColor: currentPhase.color }}
+                      style={{ borderTopColor: currentStyle.color }}
                     />
                   </div>
                 )}
@@ -228,7 +236,7 @@ export default function ResultPage() {
             {imageLoaded && (
               <div
                 className="absolute top-3 left-3 px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1.5"
-                style={{ backgroundColor: `${currentPhase.color}E6` }}
+                style={{ backgroundColor: `${currentStyle.color}E6` }}
               >
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
@@ -240,14 +248,26 @@ export default function ResultPage() {
         </div>
       </div>
 
+      {/* Profile Description */}
+      {showContent && (
+        <div className="relative z-10 px-4 pt-4 text-center max-w-md mx-auto">
+          <p className="text-white/60 text-sm leading-relaxed mb-2">
+            {profile.description}
+          </p>
+          <p className="text-sm font-medium" style={{ color: currentStyle.color }}>
+            Your strength: {profile.strength}
+          </p>
+        </div>
+      )}
+
       {/* Bottom section */}
       {showContent && (
         <div
-          className="relative z-10 pt-3 px-4 md:px-5 pb-6 rounded-t-3xl slide-up shrink-0 mt-auto backdrop-blur-sm"
+          className="relative z-10 pt-4 px-4 md:px-5 pb-6 rounded-t-3xl slide-up shrink-0 mt-auto backdrop-blur-sm"
           style={{
             paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
             backgroundColor: 'rgba(0,0,0,0.4)',
-            borderTop: `1px solid ${currentPhase.color}15`
+            borderTop: `1px solid ${currentStyle.color}15`
           }}
         >
           {/* QR Code and info */}
@@ -255,8 +275,8 @@ export default function ResultPage() {
             <div
               className="flex-shrink-0 p-2.5 rounded-xl"
               style={{
-                backgroundColor: `${currentPhase.color}15`,
-                outline: `1px solid ${currentPhase.color}25`
+                backgroundColor: `${currentStyle.color}15`,
+                outline: `1px solid ${currentStyle.color}25`
               }}
             >
               <div className="bg-white p-2 rounded-lg">
@@ -270,13 +290,13 @@ export default function ResultPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <svg style={{ color: currentPhase.color }} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg style={{ color: currentStyle.color }} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
                 <p className="text-white/90 font-medium">Scan to Download</p>
               </div>
               <p className="text-white/50 text-sm leading-relaxed">
-                Scan the QR code with your phone camera to save your Singapore moment
+                Scan the QR code with your phone camera to save your result
               </p>
             </div>
           </div>

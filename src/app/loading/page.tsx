@@ -14,15 +14,19 @@ const loadingSteps = [
 
 const stepDurations = [12000, 36000, 30000, 12000] // Total: 90 seconds
 
-const backgroundImages = {
-  past: 'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80',
-  present: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
-  future: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
+// Background images based on profile type
+const backgroundImages: Record<string, string> = {
+  guardian: 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
+  builder: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
+  shaper: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
+  'guardian-builder': 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
+  'builder-shaper': 'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=1920&q=80',
+  'adaptive-guardian': 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
 }
 
 export default function LoadingPage() {
   const router = useRouter()
-  const { photoData, answers, setResultImageUrl, setQrUrl, setR2Path, getTimePeriod, generationMethod } = useQuiz()
+  const { photoData, answers, setResultImageUrl, setQrUrl, setR2Path, getProfileType, generationMethod } = useQuiz()
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -40,8 +44,8 @@ export default function LoadingPage() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [questionsAnswered, setQuestionsAnswered] = useState(0)
 
-  const timePeriod = getTimePeriod()
-  const backgroundImage = backgroundImages[timePeriod as keyof typeof backgroundImages] || backgroundImages.present
+  const profileType = getProfileType()
+  const backgroundImage = backgroundImages[profileType] || backgroundImages.builder
 
   // Shuffle questions on mount
   useEffect(() => {
@@ -72,8 +76,8 @@ export default function LoadingPage() {
   }
 
   useEffect(() => {
-    // Redirect if no photo data
-    if (!photoData || !answers.q1 || !answers.q2 || !answers.q3) {
+    // Redirect if no photo data or incomplete answers
+    if (!photoData || !answers.q1 || !answers.q2 || !answers.q3 || !answers.q4 || !answers.q5 || !answers.q6) {
       router.push('/')
       return
     }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { QuizAnswers } from '@/types/quiz'
+import type { QuizAnswers, ProfileType } from '@/types/quiz'
 
 export const runtime = 'edge'
 
@@ -9,8 +9,7 @@ const WORKER_API_KEY = process.env.WORKER_API_KEY || ''
 
 // Security constants
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB max for base64 string
-const VALID_Q1_Q2_ANSWERS = ['A', 'B', 'C', 'D'] as const
-const VALID_Q3_ANSWERS = ['A', 'B', 'C'] as const
+const VALID_ANSWERS = ['A', 'B', 'C'] as const
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
@@ -55,80 +54,131 @@ function getClientIP(request: NextRequest): string {
          'unknown'
 }
 
-// Validate quiz answers against whitelist
+// Validate quiz answers against whitelist (all 6 questions must be A, B, or C)
 function validateAnswers(answers: QuizAnswers): boolean {
-  if (!answers.q1 || !answers.q2 || !answers.q3) return false
-  if (!VALID_Q1_Q2_ANSWERS.includes(answers.q1 as typeof VALID_Q1_Q2_ANSWERS[number])) return false
-  if (!VALID_Q1_Q2_ANSWERS.includes(answers.q2 as typeof VALID_Q1_Q2_ANSWERS[number])) return false
-  if (!VALID_Q3_ANSWERS.includes(answers.q3 as typeof VALID_Q3_ANSWERS[number])) return false
-  return true
+  const allAnswers = [answers.q1, answers.q2, answers.q3, answers.q4, answers.q5, answers.q6]
+  return allAnswers.every(answer =>
+    answer !== null && VALID_ANSWERS.includes(answer as typeof VALID_ANSWERS[number])
+  )
 }
 
-// Build prompt based on quiz answers (inlined to avoid import issues)
-function buildPrompt(answers: QuizAnswers): string {
-  const timePeriod = answers.q3 === 'A' ? 'past' : answers.q3 === 'B' ? 'present' : 'future'
-  const q1Answer = answers.q1 || 'A'
-  const q2Answer = answers.q2 || 'A'
+// Calculate profile from answers
+function calculateProfile(answers: QuizAnswers): ProfileType {
+  const allAnswers = [answers.q1, answers.q2, answers.q3, answers.q4, answers.q5, answers.q6]
+  const futureAnswers = [answers.q4, answers.q5, answers.q6]
 
-  const pastScenes: Record<string, string> = {
-    A: 'a warm kampung village scene with wooden houses on stilts, coconut trees, and community gathering',
-    B: 'a vibrant 1960s Singapore street scene with diverse cultures, traditional shophouses, and street vendors',
-    C: 'a vintage Singapore port scene with colonial architecture and early technological innovations',
-    D: 'a lush tropical garden setting with old Singapore botanic gardens and traditional greenery',
+  const counts = { A: 0, B: 0, C: 0 }
+  const futureCounts = { A: 0, B: 0, C: 0 }
+
+  allAnswers.forEach(answer => {
+    if (answer === 'A') counts.A++
+    else if (answer === 'B') counts.B++
+    else if (answer === 'C') counts.C++
+  })
+
+  futureAnswers.forEach(answer => {
+    if (answer === 'A') futureCounts.A++
+    else if (answer === 'B') futureCounts.B++
+    else if (answer === 'C') futureCounts.C++
+  })
+
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]) as [string, number][]
+  const [first, second, third] = sorted
+
+  if (first[1] > second[1]) {
+    if (first[0] === 'A') return 'guardian'
+    if (first[0] === 'B') return 'builder'
+    return 'shaper'
   }
 
-  const presentScenes: Record<string, string> = {
-    A: 'a modern HDB heartland scene with community centers, hawker centers, and neighborhood vibes',
-    B: 'a vibrant Chinatown or Little India street scene with modern Singapore multiculturalism',
-    C: 'the iconic Marina Bay skyline at golden hour with Gardens by the Bay and the Supertrees',
-    D: 'Gardens by the Bay with the Cloud Forest and Flower Dome, lush greenery and modern architecture',
+  if (first[1] === second[1] && first[1] > third[1]) {
+    const tiedLetters = [first[0], second[0]].sort()
+
+    const futureFirst = futureCounts[tiedLetters[0] as keyof typeof futureCounts]
+    const futureSecond = futureCounts[tiedLetters[1] as keyof typeof futureCounts]
+
+    let primary: string, secondary: string
+    if (futureFirst > futureSecond) {
+      primary = tiedLetters[0]
+      secondary = tiedLetters[1]
+    } else if (futureSecond > futureFirst) {
+      primary = tiedLetters[1]
+      secondary = tiedLetters[0]
+    } else {
+      if (answers.q6 === tiedLetters[0]) {
+        primary = tiedLetters[0]
+        secondary = tiedLetters[1]
+      } else if (answers.q6 === tiedLetters[1]) {
+        primary = tiedLetters[1]
+        secondary = tiedLetters[0]
+      } else {
+        primary = tiedLetters[0]
+        secondary = tiedLetters[1]
+      }
+    }
+
+    if ((primary === 'A' && secondary === 'B') || (primary === 'B' && secondary === 'A')) {
+      return 'guardian-builder'
+    }
+    if ((primary === 'B' && secondary === 'C') || (primary === 'C' && secondary === 'B')) {
+      return 'builder-shaper'
+    }
+    if ((primary === 'A' && secondary === 'C') || (primary === 'C' && secondary === 'A')) {
+      return 'adaptive-guardian'
+    }
   }
 
-  const futureScenes: Record<string, string> = {
-    A: 'a futuristic community hub with holographic displays and connected smart homes',
-    B: 'a cyberpunk multicultural festival with neon lights and diverse cultural holograms',
-    C: 'a high-tech Singapore skyline with flying vehicles, AI assistants, and smart infrastructure',
-    D: 'a green futuristic city with vertical gardens, solar panels, and sustainable architecture',
+  const futureSorted = Object.entries(futureCounts).sort((a, b) => b[1] - a[1]) as [string, number][]
+  const [futureFirst, futureSecond] = futureSorted
+
+  if (futureFirst[1] > futureSecond[1]) {
+    if (futureFirst[0] === 'A') return 'guardian'
+    if (futureFirst[0] === 'B') return 'builder'
+    return 'shaper'
   }
 
-  const iconModifiers: Record<string, { past: string; present: string; future: string }> = {
-    A: {
-      past: 'with the historic National Library building visible in the background, colonial era architecture',
-      present: 'with the modern National Library at Victoria Street, contemporary Singapore',
-      future: 'with a reimagined holographic National Library floating in the sky',
-    },
-    B: {
-      past: 'with the original Merlion statue by the Singapore River, 1970s aesthetic',
-      present: 'with the iconic Merlion at Marina Bay, present day Singapore',
-      future: 'with a giant holographic Merlion projecting from Marina Bay',
-    },
-    C: {
-      past: 'with early Marina Bay development, construction cranes and 1990s Singapore skyline',
-      present: 'with Marina Bay Sands and the ArtScience Museum, modern Singapore skyline',
-      future: 'with a futuristic Marina Bay Sands featuring floating infinity pools and light shows',
-    },
-    D: {
-      past: 'with Changi Airport in its early days, vintage planes and retro terminals',
-      present: 'with Jewel Changi Airport and the HSBC Rain Vortex waterfall',
-      future: 'with Jewel Changi transformed into a space-age biodome with alien plants',
-    },
-  }
+  if (answers.q6 === 'A') return 'guardian'
+  if (answers.q6 === 'B') return 'builder'
+  if (answers.q6 === 'C') return 'shaper'
 
-  const baseScene = timePeriod === 'past'
-    ? pastScenes[q1Answer] || pastScenes.A
-    : timePeriod === 'present'
-      ? presentScenes[q1Answer] || presentScenes.A
-      : futureScenes[q1Answer] || futureScenes.A
+  return 'builder'
+}
 
-  const iconDetail = iconModifiers[q2Answer]?.[timePeriod] || iconModifiers.A[timePeriod]
+// Scene descriptions for each profile type
+const profileScenes: Record<ProfileType, string> = {
+  guardian: 'a Singapore Civil Defence emergency preparedness scene, with uniformed personnel conducting a community training exercise, emergency response vehicles, safety equipment, and citizens participating in a neighbourhood safety drill at a modern HDB void deck',
 
-  const style = timePeriod === 'past'
-    ? 'warm sepia tones, nostalgic atmosphere, soft golden sunlight, vintage film photography style'
-    : timePeriod === 'present'
-      ? 'vibrant colors, golden hour lighting, modern photography style, clean and contemporary'
-      : 'vibrant neon colors, cyberpunk aesthetic, dramatic lighting, cinematic sci-fi style'
+  builder: 'a warm gotong royong community scene in a Singapore HDB neighbourhood, with diverse residents of all ages helping each other, community gardening, sharing food at a void deck gathering, and neighbours bonding together in a spirit of unity',
 
-  return `A photorealistic scene of ${baseScene}, ${iconDetail}. Singapore setting. ${style}. High quality, detailed, 8k resolution.`
+  shaper: 'a futuristic Smart Nation Singapore scene, with innovative technology displays, autonomous vehicles, holographic interfaces, citizens using cutting-edge devices, and sleek sustainable architecture showcasing Singapore as a global innovation hub',
+
+  'guardian-builder': 'a Singapore community resilience scene combining emergency preparedness with neighbourhood unity, showing citizens participating in a Community Emergency Response training together, with Civil Defence volunteers teaching safety skills to diverse residents at a modern HDB community centre',
+
+  'builder-shaper': 'a forward-looking Singapore community innovation scene, with residents collaborating on smart neighbourhood initiatives, a community tech hub with digital literacy programs, and citizens of all ages embracing new technology together while maintaining strong social bonds',
+
+  'adaptive-guardian': 'a dynamic Singapore scene blending security with innovation, showing smart city infrastructure with advanced monitoring systems, citizens using technology for emergency preparedness, and futuristic Civil Defence capabilities protecting a modern Singapore skyline',
+}
+
+const profileStyles: Record<ProfileType, string> = {
+  guardian: 'professional and reassuring atmosphere, organized and structured composition, warm daylight, clean and orderly, modern photography style',
+
+  builder: 'warm and welcoming atmosphere, soft golden hour lighting, heartwarming composition with people connecting, vibrant but gentle colors, documentary photography style',
+
+  shaper: 'dynamic and innovative atmosphere, cool blue and teal tones with accent neon highlights, sleek and modern composition, cinematic futuristic style',
+
+  'guardian-builder': 'balanced atmosphere of security and warmth, organized yet welcoming composition, natural daylight with warm undertones, professional documentary style',
+
+  'builder-shaper': 'optimistic and progressive atmosphere, bright and modern lighting, inclusive composition showing community and technology, contemporary lifestyle photography style',
+
+  'adaptive-guardian': 'confident and forward-looking atmosphere, dramatic lighting with cool modern tones, dynamic composition showing strength and innovation, cinematic style',
+}
+
+// Build prompt based on profile type
+function buildPrompt(profileType: ProfileType): string {
+  const scene = profileScenes[profileType]
+  const style = profileStyles[profileType]
+
+  return `A photorealistic scene of ${scene}. Singapore setting with recognizable local elements. ${style}. High quality, detailed, 8k resolution. The person should be naturally integrated into the scene.`
 }
 
 interface GenerateRequest {
@@ -181,9 +231,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build the scene prompt based on answers
-    const prompt = buildPrompt(answers)
-    const timePeriod = answers.q3 === 'A' ? 'past' : answers.q3 === 'B' ? 'present' : 'future'
+    // Calculate profile and build prompt
+    const profileType = calculateProfile(answers)
+    const prompt = buildPrompt(profileType)
 
     // Call the Cloudflare Worker with API key authentication
     const workerResponse = await fetch(`${WORKER_URL}/generate`, {
@@ -195,7 +245,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         photo,
         prompt,
-        timePeriod,
+        timePeriod: profileType, // Use profileType instead of timePeriod for R2 path organization
       }),
     })
 
@@ -212,7 +262,7 @@ export async function POST(request: NextRequest) {
       imageUrl: result.imageUrl,  // FAL.ai URL for immediate display
       r2Path: result.r2Path,      // Path for R2 upload
       prompt,
-      timePeriod,
+      profileType,
       mode: 'production',
     })
   } catch (error) {

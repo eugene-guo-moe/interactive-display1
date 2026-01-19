@@ -1,9 +1,11 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import type { QuizAnswers } from '@/types/quiz'
+import type { QuizAnswers, ProfileType, Profile } from '@/types/quiz'
+import { profiles } from '@/types/quiz'
 
-export type { QuizAnswers }
+export type { QuizAnswers, ProfileType, Profile }
+export { profiles }
 
 export type GenerationMethod = 'v1' | 'v2'
 
@@ -19,7 +21,8 @@ interface QuizContextType {
   r2Path: string | null
   setR2Path: (path: string | null) => void
   resetQuiz: () => void
-  getTimePeriod: () => 'past' | 'present' | 'future'
+  getProfile: () => Profile
+  getProfileType: () => ProfileType
   generationMethod: GenerationMethod
   setGenerationMethod: (method: GenerationMethod) => void
 }
@@ -28,9 +31,112 @@ const initialAnswers: QuizAnswers = {
   q1: null,
   q2: null,
   q3: null,
+  q4: null,
+  q5: null,
+  q6: null,
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined)
+
+/**
+ * Calculate profile based on answer distribution
+ * A = Guardian (security, preparedness)
+ * B = Builder (community, unity)
+ * C = Shaper (innovation, adaptability)
+ */
+function calculateProfile(answers: QuizAnswers): ProfileType {
+  const allAnswers = [answers.q1, answers.q2, answers.q3, answers.q4, answers.q5, answers.q6]
+  const futureAnswers = [answers.q4, answers.q5, answers.q6] // Q4-6 used for tiebreaker
+
+  // Count occurrences
+  const counts = { A: 0, B: 0, C: 0 }
+  const futureCounts = { A: 0, B: 0, C: 0 }
+
+  allAnswers.forEach(answer => {
+    if (answer === 'A') counts.A++
+    else if (answer === 'B') counts.B++
+    else if (answer === 'C') counts.C++
+  })
+
+  futureAnswers.forEach(answer => {
+    if (answer === 'A') futureCounts.A++
+    else if (answer === 'B') futureCounts.B++
+    else if (answer === 'C') futureCounts.C++
+  })
+
+  // Sort by count descending
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]) as [string, number][]
+  const [first, second, third] = sorted
+
+  // If clear dominant (first > second)
+  if (first[1] > second[1]) {
+    // Pure profile
+    if (first[0] === 'A') return 'guardian'
+    if (first[0] === 'B') return 'builder'
+    return 'shaper'
+  }
+
+  // Two-way tie for dominant - use future questions as tiebreaker
+  if (first[1] === second[1] && first[1] > third[1]) {
+    const tiedLetters = [first[0], second[0]].sort() // alphabetical: ['A','B'], ['A','C'], or ['B','C']
+
+    // Determine primary using future questions
+    const futureFirst = futureCounts[tiedLetters[0] as keyof typeof futureCounts]
+    const futureSecond = futureCounts[tiedLetters[1] as keyof typeof futureCounts]
+
+    let primary: string, secondary: string
+    if (futureFirst > futureSecond) {
+      primary = tiedLetters[0]
+      secondary = tiedLetters[1]
+    } else if (futureSecond > futureFirst) {
+      primary = tiedLetters[1]
+      secondary = tiedLetters[0]
+    } else {
+      // Still tied - use Q6 as final tiebreaker
+      if (answers.q6 === tiedLetters[0]) {
+        primary = tiedLetters[0]
+        secondary = tiedLetters[1]
+      } else if (answers.q6 === tiedLetters[1]) {
+        primary = tiedLetters[1]
+        secondary = tiedLetters[0]
+      } else {
+        // Default to alphabetical order
+        primary = tiedLetters[0]
+        secondary = tiedLetters[1]
+      }
+    }
+
+    // Return hybrid profile based on primary/secondary
+    if ((primary === 'A' && secondary === 'B') || (primary === 'B' && secondary === 'A')) {
+      return 'guardian-builder'
+    }
+    if ((primary === 'B' && secondary === 'C') || (primary === 'C' && secondary === 'B')) {
+      return 'builder-shaper'
+    }
+    if ((primary === 'A' && secondary === 'C') || (primary === 'C' && secondary === 'A')) {
+      return 'adaptive-guardian'
+    }
+  }
+
+  // Three-way tie (2-2-2) - use future questions only
+  const futureSorted = Object.entries(futureCounts).sort((a, b) => b[1] - a[1]) as [string, number][]
+  const [futureFirst, futureSecond] = futureSorted
+
+  if (futureFirst[1] > futureSecond[1]) {
+    // Clear winner in future questions
+    if (futureFirst[0] === 'A') return 'guardian'
+    if (futureFirst[0] === 'B') return 'builder'
+    return 'shaper'
+  }
+
+  // Use Q6 as final tiebreaker
+  if (answers.q6 === 'A') return 'guardian'
+  if (answers.q6 === 'B') return 'builder'
+  if (answers.q6 === 'C') return 'shaper'
+
+  // Default fallback
+  return 'builder'
+}
 
 export function QuizProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers)
@@ -52,9 +158,14 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setR2Path(null)
   }, [])
 
-  const getTimePeriod = useCallback((): 'past' | 'present' | 'future' => {
-    return answers.q3 === 'A' ? 'past' : answers.q3 === 'B' ? 'present' : 'future'
-  }, [answers.q3])
+  const getProfileType = useCallback((): ProfileType => {
+    return calculateProfile(answers)
+  }, [answers])
+
+  const getProfile = useCallback((): Profile => {
+    const profileType = calculateProfile(answers)
+    return profiles[profileType]
+  }, [answers])
 
   return (
     <QuizContext.Provider
@@ -70,7 +181,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         r2Path,
         setR2Path,
         resetQuiz,
-        getTimePeriod,
+        getProfile,
+        getProfileType,
         generationMethod,
         setGenerationMethod,
       }}
