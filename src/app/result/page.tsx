@@ -79,7 +79,7 @@ export default function ResultPage() {
           body: JSON.stringify({
             falUrl: resultImageUrl,
             r2Path: r2Path,
-            timePeriod: 'present', // Worker expects 'past'|'present'|'future'
+            timePeriod: profileType, // Profile type for R2 metadata
           }),
         })
 
@@ -96,7 +96,7 @@ export default function ResultPage() {
     }
 
     uploadToR2()
-  }, [resultImageUrl, r2Path, r2Url, uploadingToR2, setQrUrl])
+  }, [resultImageUrl, r2Path, r2Url, uploadingToR2, profileType, setQrUrl])
 
   const handleStartOver = () => {
     resetQuiz()

@@ -29,10 +29,17 @@ export interface Env {
   ALLOWED_ORIGINS?: string // Comma-separated list of allowed origins
 }
 
+// Valid profile types for image generation
+type ProfileType = 'guardian' | 'builder' | 'shaper' | 'guardian-builder' | 'builder-shaper' | 'adaptive-guardian'
+// Legacy time periods (for backwards compatibility)
+type TimePeriod = 'past' | 'present' | 'future'
+// Combined type for the API
+type GenerationCategory = ProfileType | TimePeriod
+
 interface GenerateRequest {
   photo: string // base64 image data (with or without prefix)
   prompt: string
-  timePeriod: 'past' | 'present' | 'future'
+  timePeriod: GenerationCategory // Accepts both profile types and legacy time periods
 }
 
 interface GenerateResponse {
@@ -100,8 +107,9 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
 
 // Validate R2 path to prevent path traversal - strict pattern matching
 function isValidR2Path(path: string): boolean {
-  // Strict pattern: generated/{past|present|future}/{timestamp}-{random}.jpg
-  const generatedPattern = /^generated\/(past|present|future)\/\d+-[a-z0-9]{7}\.jpg$/
+  // Strict pattern: generated/{category}/{timestamp}-{random}.jpg
+  // Categories: legacy (past|present|future) or profiles (guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)
+  const generatedPattern = /^generated\/(past|present|future|guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)\/\d+-[a-z0-9]{7}\.jpg$/
   // Strict pattern: uploads/{timestamp}-face.jpg
   const uploadsPattern = /^uploads\/\d+-[a-z0-9]{7}-face\.jpg$/
 
@@ -209,7 +217,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 async function generateWithFaceId(
   faceImageUrl: string,
   prompt: string,
-  timePeriod: 'past' | 'present' | 'future',
+  _category: GenerationCategory, // Unused but kept for API consistency
   faceAttributes: FaceAttributes,
   apiKey: string
 ): Promise<string> {
@@ -712,10 +720,11 @@ export default {
           )
         }
 
-        // Validate timePeriod
-        if (!['past', 'present', 'future'].includes(timePeriod)) {
+        // Validate timePeriod (accepts both legacy time periods and new profile types)
+        const validCategories = ['past', 'present', 'future', 'guardian', 'builder', 'shaper', 'guardian-builder', 'builder-shaper', 'adaptive-guardian']
+        if (!validCategories.includes(timePeriod)) {
           return new Response(
-            JSON.stringify({ error: 'Invalid time period' }),
+            JSON.stringify({ error: 'Invalid category' }),
             {
               status: 400,
               headers: { ...allHeaders, 'Content-Type': 'application/json' },

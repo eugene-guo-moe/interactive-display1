@@ -236,8 +236,6 @@ export async function POST(request: NextRequest) {
     const prompt = buildPrompt(profileType)
 
     // Call the Cloudflare Worker with API key authentication
-    // Note: Worker still expects 'past'|'present'|'future' for R2 path organization
-    // We use 'present' as default since profileType doesn't map to these values
     const workerResponse = await fetch(`${WORKER_URL}/generate`, {
       method: 'POST',
       headers: {
@@ -247,7 +245,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         photo,
         prompt,
-        timePeriod: 'present', // Worker uses this for R2 path; profile is in the prompt
+        timePeriod: profileType, // Used for R2 path organization by profile
       }),
     })
 
