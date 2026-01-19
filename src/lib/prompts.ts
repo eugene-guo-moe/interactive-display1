@@ -4,14 +4,14 @@ import type { QuizAnswers, ProfileType } from '@/types/quiz'
 // IMPORTANT: Prompts focus on a SINGLE PERSON (the user) to ensure PuLID preserves their face
 const profileScenes: Record<ProfileType, string> = {
   // Pure profiles
-  guardian: 'a single person standing confidently in front of a Singapore Civil Defence training display, wearing a volunteer vest, emergency response equipment and safety banners visible behind them at a modern HDB void deck, looking at the camera',
+  guardian: 'a single person standing confidently in front of a Singapore Civil Defence training display, wearing a plain orange volunteer vest without any text or logos, emergency response equipment visible behind them at a modern HDB void deck, looking at the camera',
 
   builder: 'a single person standing warmly in a Singapore HDB void deck decorated for a community event, potted plants and food tables visible in the background, golden hour sunlight streaming through, looking at the camera',
 
   shaper: 'a single person holding a glowing holographic tablet in futuristic Singapore, smart city architecture and digital displays in the background, autonomous vehicles on elevated roads behind them, looking at the camera',
 
   // Hybrid profiles - blending elements from both archetypes
-  'guardian-builder': 'a single person wearing a Community Emergency Response Team vest standing at a Singapore HDB community centre, safety equipment and community event banners arranged in the background, looking at the camera',
+  'guardian-builder': 'a single person wearing a plain orange safety vest without any text or logos standing at a Singapore HDB community centre, safety equipment arranged in the background, looking at the camera',
 
   'builder-shaper': 'a single person holding a tablet at a smart community hub in Singapore, digital screens and modern HDB architecture visible in the background, looking at the camera',
 
