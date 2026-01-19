@@ -1,20 +1,21 @@
 import type { QuizAnswers, ProfileType } from '@/types/quiz'
 
 // Scene descriptions for each profile type
+// IMPORTANT: Prompts focus on a SINGLE PERSON (the user) to ensure PuLID preserves their face
 const profileScenes: Record<ProfileType, string> = {
   // Pure profiles
-  guardian: 'a Singapore Civil Defence emergency preparedness scene, with uniformed personnel conducting a community training exercise, emergency response vehicles, safety equipment, and citizens participating in a neighbourhood safety drill at a modern HDB void deck',
+  guardian: 'a person standing confidently at a Singapore Civil Defence community training event, wearing a volunteer vest, with emergency response equipment and safety banners visible in the background at a modern HDB void deck',
 
-  builder: 'a warm gotong royong community scene in a Singapore HDB neighbourhood, with diverse residents of all ages helping each other, community gardening, sharing food at a void deck gathering, and neighbours bonding together in a spirit of unity',
+  builder: 'a person warmly greeting neighbours at a gotong royong community event in a Singapore HDB void deck, with potted plants and shared food visible in the background, golden hour sunlight streaming through',
 
-  shaper: 'a futuristic Smart Nation Singapore scene, with innovative technology displays, autonomous vehicles, holographic interfaces, citizens using cutting-edge devices, and sleek sustainable architecture showcasing Singapore as a global innovation hub',
+  shaper: 'a person using a holographic tablet interface in futuristic Singapore, with smart city architecture, digital displays, and autonomous vehicles visible in the sleek urban background',
 
   // Hybrid profiles - blending elements from both archetypes
-  'guardian-builder': 'a Singapore community resilience scene combining emergency preparedness with neighbourhood unity, showing citizens participating in a Community Emergency Response training together, with Civil Defence volunteers teaching safety skills to diverse residents at a modern HDB community centre',
+  'guardian-builder': 'a person wearing a Community Emergency Response Team vest while helping set up a neighbourhood event at a Singapore HDB community centre, with safety equipment and community banners in the background',
 
-  'builder-shaper': 'a forward-looking Singapore community innovation scene, with residents collaborating on smart neighbourhood initiatives, a community tech hub with digital literacy programs, and citizens of all ages embracing new technology together while maintaining strong social bonds',
+  'builder-shaper': 'a person demonstrating a tablet app to help neighbours at a smart community hub in Singapore, with digital screens showing community programs and modern HDB architecture in the background',
 
-  'adaptive-guardian': 'a dynamic Singapore scene blending security with innovation, showing smart city infrastructure with advanced monitoring systems, citizens using technology for emergency preparedness, and futuristic Civil Defence capabilities protecting a modern Singapore skyline',
+  'adaptive-guardian': 'a person monitoring a smart city dashboard at a modern Singapore emergency operations display, with futuristic screens showing city infrastructure and the Marina Bay skyline visible through windows',
 }
 
 // Style descriptions for each profile type
