@@ -4,16 +4,16 @@ import type { QuizAnswers, ProfileType } from '@/types/quiz'
 // IMPORTANT: Prompts focus on a SINGLE PERSON (the user) to ensure PuLID preserves their face
 const profileScenes: Record<ProfileType, string> = {
   // Pure profiles
-  guardian: 'a single person standing confidently at a Singapore Police Force neighbourhood police post, wearing a smart casual polo shirt, community safety posters and a friendly service counter visible in the background, looking at the camera',
+  guardian: 'a single person standing confidently wearing a plain dark blue police uniform without any text badges or logos, a white and blue police patrol car parked in the background, looking at the camera',
 
-  builder: 'a single person standing warmly at a Singapore community centre activity room, colourful event banners and chairs arranged for a gathering visible in the background, natural daylight streaming through windows, looking at the camera',
+  builder: 'medium close-up portrait of a single person standing warmly under a Singapore HDB void deck with concrete pillars, red plastic chairs and folding tables visible behind, crowd of blurred residents mingling in the background, HDB apartment blocks visible, colorful bunting decorations, warm evening lighting, looking at the camera',
 
   shaper: 'a single person holding a glowing holographic tablet in futuristic Singapore, smart city architecture and digital displays in the background, autonomous vehicles on elevated roads behind them, looking at the camera',
 
   // Hybrid profiles - blending elements from both archetypes
-  'guardian-builder': 'a single person organizing supplies at a Singapore community food bank, shelves stocked with groceries and donation boxes visible in the background, warm indoor lighting, looking at the camera',
+  'guardian-builder': 'a single person organizing food supplies at a Singapore community soup kitchen, large pots of soup on stoves and trays of vegetables being prepared by blurred volunteers in the background, warm indoor lighting, looking at the camera',
 
-  'builder-shaper': 'a single person patiently teaching an elderly resident to use a smartphone at a Singapore community centre, comfortable seating and learning materials visible in the background, warm friendly atmosphere, looking at the camera',
+  'builder-shaper': 'a single person leaning forward demonstrating a smartphone to an elderly person seen from behind with grey hair, pointing at the phone screen with one hand, looking warmly at the elderly person, at a Singapore community centre, warm friendly atmosphere',
 
   'adaptive-guardian': 'a single person standing at a modern cybersecurity operations centre, multiple screens displaying network monitoring dashboards and security alerts behind them, blue ambient lighting, looking at the camera',
 }
