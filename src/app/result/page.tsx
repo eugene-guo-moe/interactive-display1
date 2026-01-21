@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useQuiz, ProfileType } from '@/context/QuizContext'
 import { QRCodeSVG } from 'qrcode.react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { toPng } from 'html-to-image'
 
 // Profile styling configuration
 const profileStyles: Record<ProfileType, { image: string; color: string }> = {
@@ -43,6 +44,8 @@ export default function ResultPage() {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [r2Url, setR2Url] = useState<string | null>(null)
   const [uploadingToR2, setUploadingToR2] = useState(false)
+  const [isGeneratingCard, setIsGeneratingCard] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const profile = getProfile()
   const profileType = getProfileType()
@@ -104,13 +107,30 @@ export default function ResultPage() {
   }
 
   const handleDownload = async () => {
-    if (!downloadUrl) return
+    if (!cardRef.current) return
 
+    setIsGeneratingCard(true)
     try {
-      // Open in new tab for download
-      window.open(downloadUrl, '_blank')
+      // Generate card image from the hidden card component
+      const dataUrl = await toPng(cardRef.current, {
+        quality: 1,
+        pixelRatio: 2, // Higher resolution
+        cacheBust: true,
+      })
+
+      // Create download link
+      const link = document.createElement('a')
+      link.download = `riverside-${profileType}-${Date.now()}.png`
+      link.href = dataUrl
+      link.click()
     } catch (err) {
       console.error('Download error:', err)
+      // Fallback to direct image download
+      if (downloadUrl) {
+        window.open(downloadUrl, '_blank')
+      }
+    } finally {
+      setIsGeneratingCard(false)
     }
   }
 
@@ -314,12 +334,22 @@ export default function ResultPage() {
             </button>
             <button
               onClick={handleDownload}
-              className="btn-press flex-1 py-3.5 rounded-full bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all flex items-center justify-center gap-2"
+              disabled={isGeneratingCard}
+              className="btn-press flex-1 py-3.5 rounded-full bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download
+              {isGeneratingCard ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-[#1e3a5f]/30 border-t-[#1e3a5f] rounded-full animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </>
+              )}
             </button>
           </div>
 
@@ -347,6 +377,124 @@ export default function ResultPage() {
           </div>
         </div>
       )}
+
+      {/* Hidden card for download - positioned off-screen */}
+      <div
+        ref={cardRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '540px',
+          height: '960px',
+          backgroundColor: '#0a0a0a',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+        }}
+      >
+        {/* Card content */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          padding: '24px',
+        }}>
+          {/* School logo */}
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/school-logo.png"
+              alt="Riverside Secondary School"
+              style={{ height: '60px', margin: '0 auto' }}
+              crossOrigin="anonymous"
+            />
+          </div>
+
+          {/* Generated image */}
+          <div style={{
+            flex: '0 0 auto',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            border: `3px solid ${currentStyle.color}`,
+            boxShadow: `0 8px 32px ${currentStyle.color}40`,
+          }}>
+            {displayImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displayImageUrl}
+                alt="Your Singapore moment"
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+                crossOrigin="anonymous"
+              />
+            )}
+          </div>
+
+          {/* Profile info */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            textAlign: 'center',
+            padding: '20px 0',
+          }}>
+            {/* Emoji and title */}
+            <div style={{ fontSize: '48px', marginBottom: '8px' }}>{profile.emoji}</div>
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: 700,
+              color: currentStyle.color,
+              marginBottom: '8px',
+              textShadow: `0 0 30px ${currentStyle.color}60`,
+            }}>
+              {profile.title}
+            </h2>
+            <p style={{
+              fontSize: '16px',
+              color: 'rgba(255,255,255,0.7)',
+              fontStyle: 'italic',
+              marginBottom: '16px',
+              padding: '0 16px',
+            }}>
+              &ldquo;{profile.tagline}&rdquo;
+            </p>
+
+            {/* Description */}
+            <p style={{
+              fontSize: '14px',
+              color: 'rgba(255,255,255,0.6)',
+              lineHeight: 1.6,
+              marginBottom: '12px',
+              padding: '0 8px',
+            }}>
+              {profile.description}
+            </p>
+
+            {/* Strength */}
+            <p style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: currentStyle.color,
+              padding: '0 8px',
+            }}>
+              Your strength: {profile.strength}
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            textAlign: 'center',
+            borderTop: `1px solid ${currentStyle.color}30`,
+            paddingTop: '16px',
+          }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+              RIVERSIDE SECONDARY SCHOOL, SINGAPORE
+            </p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
+              Powered by AI
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
