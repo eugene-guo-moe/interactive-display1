@@ -162,14 +162,16 @@ function ResultPageContent() {
           base64Img = await convertImageToBase64(displayImageUrl)
           setImageBase64(base64Img)
           console.log('Base64 conversion successful')
+          // Wait longer for React to re-render with new state
+          await new Promise(resolve => setTimeout(resolve, 1500))
         } catch (convErr) {
           console.warn('Could not convert image to base64:', convErr)
           console.warn('Trying direct capture instead')
         }
+      } else {
+        // Still wait for any pending renders
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
-
-      // Wait for the hidden card to render with the base64 image
-      await new Promise(resolve => setTimeout(resolve, 500))
 
       // Generate card image
       const dataUrl = await toPng(cardRef.current, {
@@ -561,17 +563,20 @@ function ResultPageContent() {
         </div>
       )}
 
-      {/* Hidden card for generation - positioned off-screen */}
+      {/* Hidden card for generation - visible but behind everything for proper rendering */}
       <div
         ref={cardRef}
         style={{
-          position: 'absolute',
-          left: '-9999px',
+          position: 'fixed',
+          left: 0,
           top: 0,
           width: '540px',
           height: '960px',
           backgroundColor: '#0a0a0a',
           fontFamily: 'system-ui, -apple-system, sans-serif',
+          zIndex: -1,
+          opacity: 0.01, // Nearly invisible but still renders
+          pointerEvents: 'none',
         }}
       >
         {/* Card content */}
@@ -581,11 +586,11 @@ function ResultPageContent() {
           height: '100%',
           padding: '24px',
         }}>
-          {/* School logo */}
+          {/* School logo - use absolute URL for proper rendering */}
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/school-logo.png"
+              src={typeof window !== 'undefined' ? `${window.location.origin}/school-logo.png` : '/school-logo.png'}
               alt="Riverside Secondary School"
               style={{ height: '60px', margin: '0 auto' }}
               crossOrigin="anonymous"
