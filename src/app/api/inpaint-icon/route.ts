@@ -1,6 +1,8 @@
 import { fal } from "@fal-ai/client";
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = 'edge';
+
 // Configure FAL client
 fal.config({
   credentials: process.env.FAL_KEY!,
@@ -90,6 +92,7 @@ function createMaskDataUrl(width: number, height: number): string {
     </svg>
   `;
 
-  const base64 = Buffer.from(svg).toString('base64');
+  // Use btoa for edge runtime (no Buffer available)
+  const base64 = btoa(svg);
   return `data:image/svg+xml;base64,${base64}`;
 }
