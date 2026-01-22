@@ -173,11 +173,12 @@ function ResultPageContent() {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      // Generate card image
+      // Generate card image - skip fonts to avoid CSP blocking external font fetch
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
         pixelRatio: 2,
         cacheBust: true,
+        skipFonts: true,
       })
 
       setCardDataUrl(dataUrl)
