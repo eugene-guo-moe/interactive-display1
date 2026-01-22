@@ -12,7 +12,7 @@ compatibility_date = "2024-01-01"
 PUBLIC_URL = "https://riversidesec.eugene-ff3.workers.dev"
 AWS_REGION = "ap-southeast-1"
 # Comma-separated list of allowed origins for CORS
-ALLOWED_ORIGINS = "https://interactive-display.vercel.app,https://riversidesec.vercel.app,https://riversidesec.pages.dev,http://localhost:3000"
+ALLOWED_ORIGINS = "https://interactive-display.vercel.app,https://riversidesec.vercel.app,https://riversidesec.pages.dev,http://localhost:3000,http://localhost:3004,http://localhost:3005"
 
 # R2 bucket binding
 [[r2_buckets]]

@@ -112,8 +112,10 @@ function isValidR2Path(path: string): boolean {
   const generatedPattern = /^generated\/(past|present|future|guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)\/\d+-[a-z0-9]{7}\.jpg$/
   // Strict pattern: uploads/{timestamp}-face.jpg
   const uploadsPattern = /^uploads\/\d+-[a-z0-9]{7}-face\.jpg$/
+  // Strict pattern: cards/{profile}/{timestamp}-{random}.png
+  const cardsPattern = /^cards\/(guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)\/\d+-[a-z0-9]{9}\.png$/
 
-  return generatedPattern.test(path) || uploadsPattern.test(path)
+  return generatedPattern.test(path) || uploadsPattern.test(path) || cardsPattern.test(path)
 }
 
 // Get allowed origins from env or default
@@ -875,8 +877,70 @@ export default {
       }
     }
 
-    // Serve images from R2 (generated images and uploaded photos)
-    if (url.pathname.startsWith('/generated/') || url.pathname.startsWith('/uploads/')) {
+    // Upload card image (PNG with profile info) to R2
+    // Called by frontend after generating the shareable card
+    if (url.pathname === '/upload-card' && request.method === 'POST') {
+      try {
+        const body = await request.json() as { cardData: string; cardPath: string; profileType: string }
+        const { cardData, cardPath, profileType } = body
+
+        // Validate required fields
+        if (!cardData || !cardPath || !profileType) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required fields: cardData, cardPath, profileType' }),
+            { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Validate cardPath format for security
+        if (!isValidR2Path(cardPath)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid cardPath format' }),
+            { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Validate base64 format
+        if (!isValidBase64(cardData)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid card data format' }),
+            { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        console.log(`[upload-card] Uploading card for profile: ${profileType}`)
+        const uploadStart = Date.now()
+
+        // Decode base64 to buffer
+        const cardBuffer = base64ToArrayBuffer(cardData)
+
+        // Upload to R2
+        await env.IMAGES_BUCKET.put(cardPath, cardBuffer, {
+          httpMetadata: { contentType: 'image/png' },
+          customMetadata: {
+            profileType,
+            createdAt: new Date().toISOString(),
+          },
+        })
+        console.log(`[upload-card] R2 upload: ${Date.now() - uploadStart}ms`)
+
+        const cardUrl = `${env.PUBLIC_URL}/${cardPath}`
+        console.log(`[upload-card] Complete. Card URL: ${cardUrl}`)
+
+        return new Response(JSON.stringify({ cardUrl }), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (error) {
+        console.error('[upload-card] Error:', error)
+        return new Response(
+          JSON.stringify({ error: 'Failed to upload card' }),
+          { status: 500, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // Serve images from R2 (generated images, cards, and uploaded photos)
+    if (url.pathname.startsWith('/generated/') || url.pathname.startsWith('/uploads/') || url.pathname.startsWith('/cards/')) {
       const key = url.pathname.slice(1) // Remove leading slash
 
       // Path traversal protection
@@ -897,7 +961,7 @@ export default {
       const isUpload = key.startsWith('uploads/')
       const cacheControl = isUpload
         ? 'private, no-store' // No caching for uploads (kiosk privacy)
-        : 'public, max-age=86400' // 1 day for generated images
+        : 'public, max-age=86400' // 1 day for generated images and cards
 
       return new Response(object.body, {
         headers: {

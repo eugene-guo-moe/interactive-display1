@@ -1,9 +1,9 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuiz, ProfileType } from '@/context/QuizContext'
 import { QRCodeSVG } from 'qrcode.react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { toPng } from 'html-to-image'
 
 // Profile styling configuration
@@ -37,27 +37,58 @@ const profileStyles: Record<ProfileType, { image: string; color: string }> = {
 // Worker URL for R2 upload
 const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
 
-export default function ResultPage() {
+type CardStatus = 'generating' | 'uploading' | 'ready' | 'error'
+
+// Test mode profiles for testing different profile types
+const testProfiles: Record<string, ProfileType> = {
+  guardian: 'guardian',
+  builder: 'builder',
+  shaper: 'shaper',
+  'guardian-builder': 'guardian-builder',
+  'builder-shaper': 'builder-shaper',
+  'adaptive-guardian': 'adaptive-guardian',
+}
+
+function ResultPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { resultImageUrl, qrUrl, setQrUrl, r2Path, getProfile, getProfileType, resetQuiz, photoData } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [r2Url, setR2Url] = useState<string | null>(null)
-  const [uploadingToR2, setUploadingToR2] = useState(false)
-  const [isGeneratingCard, setIsGeneratingCard] = useState(false)
+  const [cardStatus, setCardStatus] = useState<CardStatus>('generating')
+  const [cardUrl, setCardUrl] = useState<string | null>(null)
+  const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
+  const [imageBase64, setImageBase64] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const hasStartedCardGeneration = useRef(false)
 
-  const profile = getProfile()
-  const profileType = getProfileType()
+  // Test mode: allow passing image URL and profile via query params
+  // Usage: /result?testImage=https://...&testProfile=builder
+  const testImage = searchParams.get('testImage')
+  const testProfile = searchParams.get('testProfile') as ProfileType | null
+  const isTestMode = !!testImage
+
+  const profile = isTestMode && testProfile && testProfiles[testProfile]
+    ? require('@/types/quiz').profiles[testProfile]
+    : getProfile()
+  const profileType = isTestMode && testProfile && testProfiles[testProfile]
+    ? testProfile
+    : getProfileType()
   const currentStyle = profileStyles[profileType] || profileStyles.builder
 
-  // Use FAL.ai URL for display (fast CDN)
-  const displayImageUrl = resultImageUrl || photoData
+  // Use FAL.ai URL for display (fast CDN), or test image in test mode
+  const displayImageUrl = isTestMode ? testImage : (resultImageUrl || photoData)
 
-  // Use R2 URL for download/QR if available, otherwise FAL.ai URL
-  const downloadUrl = r2Url || qrUrl || resultImageUrl || ''
+  // QR code shows card URL when ready, otherwise placeholder
+  const qrValue = cardUrl || 'https://riversidesec.pages.dev'
 
   useEffect(() => {
+    // Skip redirect in test mode
+    if (isTestMode) {
+      const timer = setTimeout(() => setShowContent(true), 500)
+      return () => clearTimeout(timer)
+    }
+
     // If no result image and no photo, redirect to start
     if (!resultImageUrl && !photoData) {
       router.push('/')
@@ -67,71 +98,251 @@ export default function ResultPage() {
     // Show content after a delay
     const timer = setTimeout(() => setShowContent(true), 500)
     return () => clearTimeout(timer)
-  }, [resultImageUrl, photoData, router])
+  }, [resultImageUrl, photoData, router, isTestMode])
 
-  // Upload to R2 in background when page loads
-  useEffect(() => {
-    if (!resultImageUrl || !r2Path || r2Url || uploadingToR2) return
+  // Convert image URL to base64 to avoid CORS issues with html-to-image
+  const convertImageToBase64 = useCallback(async (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
 
-    const uploadToR2 = async () => {
-      setUploadingToR2(true)
-      try {
-        const response = await fetch(`${WORKER_URL}/upload-to-r2`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            falUrl: resultImageUrl,
-            r2Path: r2Path,
-            timePeriod: profileType, // Profile type for R2 metadata
-          }),
-        })
+      const timeout = setTimeout(() => {
+        reject(new Error('Image load timeout'))
+      }, 15000) // 15 second timeout
 
-        if (response.ok) {
-          const data = await response.json()
-          setR2Url(data.r2Url)
-          setQrUrl(data.r2Url)
+      img.onload = () => {
+        clearTimeout(timeout)
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.naturalWidth
+          canvas.height = img.naturalHeight
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'))
+            return
+          }
+          ctx.drawImage(img, 0, 0)
+          const dataUrl = canvas.toDataURL('image/png')
+          console.log('Image converted to base64 successfully, size:', Math.round(dataUrl.length / 1024), 'KB')
+          resolve(dataUrl)
+        } catch (err) {
+          console.error('Canvas conversion error:', err)
+          reject(err)
         }
-      } catch {
-        // Silently fail - FAL.ai URL still works for display
-      } finally {
-        setUploadingToR2(false)
       }
-    }
+      img.onerror = (e) => {
+        clearTimeout(timeout)
+        console.error('Image load error for URL:', url, e)
+        reject(new Error('Failed to load image: ' + url))
+      }
+      img.src = url
+    })
+  }, [])
 
-    uploadToR2()
-  }, [resultImageUrl, r2Path, r2Url, uploadingToR2, profileType, setQrUrl])
+  // Generate card and upload to R2 when image is loaded
+  const generateAndUploadCard = useCallback(async () => {
+    console.log('generateAndUploadCard called', {
+      hasCardRef: !!cardRef.current,
+      displayImageUrl: displayImageUrl?.substring(0, 50) + '...',
+      hasStarted: hasStartedCardGeneration.current
+    })
+
+    if (!cardRef.current || !displayImageUrl || hasStartedCardGeneration.current) return
+    hasStartedCardGeneration.current = true
+
+    setCardStatus('generating')
+    console.log('Card generation started')
+
+    try {
+      // Convert external image to base64 first to avoid CORS issues
+      let base64Img = imageBase64
+      if (!base64Img && displayImageUrl && !displayImageUrl.startsWith('data:')) {
+        console.log('Converting image to base64...')
+        try {
+          base64Img = await convertImageToBase64(displayImageUrl)
+          setImageBase64(base64Img)
+          console.log('Base64 conversion successful')
+        } catch (convErr) {
+          console.warn('Could not convert image to base64:', convErr)
+          console.warn('Trying direct capture instead')
+        }
+      }
+
+      // Wait for the hidden card to render with the base64 image
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Generate card image
+      const dataUrl = await toPng(cardRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        cacheBust: true,
+      })
+
+      setCardDataUrl(dataUrl)
+      setCardStatus('uploading')
+
+      // Extract base64 data for upload
+      const base64Data = dataUrl.split(',')[1]
+      const cardPath = `cards/${profileType}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`
+
+      // Upload to R2 via worker
+      const uploadResponse = await fetch(`${WORKER_URL}/upload-card`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardData: base64Data,
+          cardPath: cardPath,
+          profileType: profileType,
+        }),
+      })
+
+      if (uploadResponse.ok) {
+        const data = await uploadResponse.json()
+        setCardUrl(data.cardUrl)
+        setQrUrl(data.cardUrl)
+        setCardStatus('ready')
+      } else {
+        throw new Error('Upload failed')
+      }
+    } catch (err) {
+      console.error('Card generation error:', err)
+      // Log more details
+      if (err instanceof Error) {
+        console.error('Error name:', err.name)
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+      }
+      setCardStatus('error')
+    }
+  }, [displayImageUrl, profileType, setQrUrl, imageBase64, convertImageToBase64])
+
+  // Start card generation when image is loaded
+  useEffect(() => {
+    if (imageLoaded && displayImageUrl) {
+      generateAndUploadCard()
+    }
+  }, [imageLoaded, displayImageUrl, generateAndUploadCard])
 
   const handleStartOver = () => {
     resetQuiz()
     router.push('/')
   }
 
-  const handleDownload = async () => {
-    if (!cardRef.current) return
-
-    setIsGeneratingCard(true)
-    try {
-      // Generate card image from the hidden card component
-      const dataUrl = await toPng(cardRef.current, {
-        quality: 1,
-        pixelRatio: 2, // Higher resolution
-        cacheBust: true,
-      })
-
-      // Create download link
+  const handleDownload = () => {
+    if (cardDataUrl) {
       const link = document.createElement('a')
       link.download = `riverside-${profileType}-${Date.now()}.png`
-      link.href = dataUrl
+      link.href = cardDataUrl
       link.click()
-    } catch (err) {
-      console.error('Download error:', err)
-      // Fallback to direct image download
-      if (downloadUrl) {
-        window.open(downloadUrl, '_blank')
-      }
-    } finally {
-      setIsGeneratingCard(false)
+    } else if (cardUrl) {
+      window.open(cardUrl, '_blank')
     }
+  }
+
+  const handleRetryCard = () => {
+    hasStartedCardGeneration.current = false
+    setCardStatus('generating')
+    generateAndUploadCard()
+  }
+
+  // Render QR section based on card status
+  const renderQRSection = () => {
+    if (cardStatus === 'generating' || cardStatus === 'uploading') {
+      return (
+        <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+          <div
+            className="flex-shrink-0 p-2.5 rounded-xl"
+            style={{
+              backgroundColor: `${currentStyle.color}15`,
+              outline: `1px solid ${currentStyle.color}25`
+            }}
+          >
+            <div className="bg-white/10 p-2 rounded-lg w-[96px] h-[96px] flex items-center justify-center">
+              <div
+                className="w-8 h-8 border-2 border-white/20 rounded-full animate-spin"
+                style={{ borderTopColor: currentStyle.color }}
+              />
+            </div>
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <svg style={{ color: currentStyle.color }} className="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+              <p className="text-white/90 font-medium">
+                {cardStatus === 'generating' ? 'Creating your card...' : 'Uploading...'}
+              </p>
+            </div>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Please wait while we prepare your shareable card
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    if (cardStatus === 'error') {
+      return (
+        <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+          <div
+            className="flex-shrink-0 p-2.5 rounded-xl"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              outline: '1px solid rgba(239, 68, 68, 0.25)'
+            }}
+          >
+            <div className="bg-white/10 p-2 rounded-lg w-[96px] h-[96px] flex items-center justify-center">
+              <svg className="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1">
+            <p className="text-white/90 font-medium mb-1">Card generation failed</p>
+            <button
+              onClick={handleRetryCard}
+              className="text-sm font-medium hover:underline"
+              style={{ color: currentStyle.color }}
+            >
+              Tap to try again
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // Card is ready
+    return (
+      <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+        <div
+          className="flex-shrink-0 p-2.5 rounded-xl"
+          style={{
+            backgroundColor: `${currentStyle.color}15`,
+            outline: `1px solid ${currentStyle.color}25`
+          }}
+        >
+          <div className="bg-white p-2 rounded-lg">
+            <QRCodeSVG
+              value={qrValue}
+              size={80}
+              level="M"
+              includeMargin={false}
+            />
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <svg style={{ color: currentStyle.color }} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p className="text-white/90 font-medium">Scan to Download</p>
+          </div>
+          <p className="text-white/50 text-sm leading-relaxed">
+            Scan the QR code with your phone camera to save your card
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -290,38 +501,10 @@ export default function ResultPage() {
             borderTop: `1px solid ${currentStyle.color}15`
           }}
         >
-          {/* QR Code and info */}
-          <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
-            <div
-              className="flex-shrink-0 p-2.5 rounded-xl"
-              style={{
-                backgroundColor: `${currentStyle.color}15`,
-                outline: `1px solid ${currentStyle.color}25`
-              }}
-            >
-              <div className="bg-white p-2 rounded-lg">
-                <QRCodeSVG
-                  value={downloadUrl}
-                  size={80}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <svg style={{ color: currentStyle.color }} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <p className="text-white/90 font-medium">Scan to Download</p>
-              </div>
-              <p className="text-white/50 text-sm leading-relaxed">
-                Scan the QR code with your phone camera to save your result
-              </p>
-            </div>
-          </div>
+          {/* QR Code section - dynamic based on card status */}
+          {renderQRSection()}
 
-          {/* Action buttons - matching homepage CTA style */}
+          {/* Action buttons */}
           <div className="flex gap-3 max-w-md mx-auto">
             <button
               onClick={handleStartOver}
@@ -334,13 +517,13 @@ export default function ResultPage() {
             </button>
             <button
               onClick={handleDownload}
-              disabled={isGeneratingCard}
-              className="btn-press flex-1 py-3.5 rounded-full bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+              disabled={cardStatus !== 'ready' && cardStatus !== 'error'}
+              className="btn-press flex-1 py-3.5 rounded-full bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              {isGeneratingCard ? (
+              {cardStatus === 'generating' || cardStatus === 'uploading' ? (
                 <>
                   <div className="w-5 h-5 border-2 border-[#1e3a5f]/30 border-t-[#1e3a5f] rounded-full animate-spin" />
-                  Creating...
+                  Preparing...
                 </>
               ) : (
                 <>
@@ -378,7 +561,7 @@ export default function ResultPage() {
         </div>
       )}
 
-      {/* Hidden card for download - positioned off-screen */}
+      {/* Hidden card for generation - positioned off-screen */}
       <div
         ref={cardRef}
         style={{
@@ -409,20 +592,21 @@ export default function ResultPage() {
             />
           </div>
 
-          {/* Generated image */}
+          {/* Generated image - use base64 version to avoid CORS issues */}
           <div style={{
             flex: '0 0 auto',
             borderRadius: '16px',
             overflow: 'hidden',
             border: `3px solid ${currentStyle.color}`,
             boxShadow: `0 8px 32px ${currentStyle.color}40`,
+            maxHeight: '450px',
           }}>
-            {displayImageUrl && (
+            {(imageBase64 || displayImageUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={displayImageUrl}
+                src={imageBase64 || displayImageUrl || ''}
                 alt="Your Singapore moment"
-                style={{ width: '100%', height: 'auto', display: 'block' }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 crossOrigin="anonymous"
               />
             )}
@@ -496,5 +680,16 @@ export default function ResultPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Wrap in Suspense for useSearchParams
+export default function ResultPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center bg-[#050505]">
+      <div className="w-10 h-10 border-2 border-white/20 border-t-emerald-500 rounded-full animate-spin" />
+    </div>}>
+      <ResultPageContent />
+    </Suspense>
   )
 }
