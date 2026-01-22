@@ -1,100 +1,123 @@
 import { chromium } from 'playwright'
+import * as path from 'path'
+import * as fs from 'fs'
 
-const BASE_URL = 'https://riversidesec.pages.dev'
+// Test images from previous FAL.ai generations
+const testImages = [
+  'https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png',
+  'https://v3b.fal.media/files/b/0a8b601a/zeUa63VI3LQBbsXfDPWvt.png',
+  'https://v3b.fal.media/files/b/0a8b601b/tx5bYSfl10kEBQpCn32ng.png'
+]
+
+const profiles = ['guardian', 'builder', 'shaper']
 
 async function testResultPage() {
-  console.log('Launching browser...')
+  console.log('=== Result Page Card Generation Test ===\n')
+
+  const outputDir = path.join(process.cwd(), 'scripts/result-test')
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true })
+  }
+
   const browser = await chromium.launch({ headless: false })
-  const context = await browser.newContext()
+  const context = await browser.newContext({
+    viewport: { width: 430, height: 932 },
+  })
   const page = await context.newPage()
 
-  // Enable console logging from the page
-  page.on('console', msg => {
-    if (msg.type() === 'log') {
-      console.log('[PAGE]', msg.text())
-    }
-  })
-
-  // Track network requests to see R2 polling
-  page.on('request', request => {
-    const url = request.url()
-    if (url.includes('r2.') || url.includes('HEAD')) {
-      console.log('[NETWORK]', request.method(), url)
-    }
-  })
-
+  // Log network requests for card upload
   page.on('response', response => {
     const url = response.url()
-    if (url.includes('r2.') || url.includes('riversidesec.eugene')) {
-      console.log('[RESPONSE]', response.status(), url)
+    if (url.includes('upload-card')) {
+      console.log(`   [NETWORK] ${response.status()} POST /upload-card`)
+    }
+  })
+
+  // Log all relevant console messages
+  page.on('console', msg => {
+    const text = msg.text()
+    if (msg.type() === 'error' ||
+        text.includes('Card') ||
+        text.includes('card') ||
+        text.includes('Base64') ||
+        text.includes('base64') ||
+        text.includes('upload') ||
+        text.includes('generation') ||
+        text.includes('Converting')) {
+      console.log(`   [CONSOLE ${msg.type()}] ${text}`)
     }
   })
 
   try {
-    // Step 1: Go to home page
-    console.log('\n=== Step 1: Home Page ===')
-    await page.goto(BASE_URL)
-    await page.waitForTimeout(1000)
+    for (let i = 0; i < testImages.length; i++) {
+      const imageUrl = testImages[i]
+      const profile = profiles[i]
 
-    // Click start button
-    await page.click('text=Begin Your Journey')
-    await page.waitForTimeout(500)
+      console.log(`\n--- Test ${i + 1}/3: ${profile} profile ---`)
 
-    // Step 2: Answer Question 1
-    console.log('\n=== Step 2: Question 1 ===')
-    await page.waitForSelector('text=What aspect of Singapore')
-    await page.waitForTimeout(2000) // Wait for animation
-    await page.click('button:has-text("Kampung spirit")')
-    await page.waitForTimeout(500)
+      // Use test mode URL params
+      const testUrl = `http://localhost:3005/result?testImage=${encodeURIComponent(imageUrl)}&testProfile=${profile}`
+      console.log('1. Navigating to result page in test mode...')
+      await page.goto(testUrl)
+      await page.waitForTimeout(1000)
 
-    // Step 3: Answer Question 2
-    console.log('\n=== Step 3: Question 2 ===')
-    await page.waitForSelector('text=Which Singapore icon')
-    await page.waitForTimeout(2000)
-    await page.click('button:has-text("Merlion")')
-    await page.waitForTimeout(500)
+      // Screenshot initial state
+      await page.screenshot({ path: path.join(outputDir, `${i + 1}-${profile}-initial.png`) })
+      console.log(`   Screenshot: ${i + 1}-${profile}-initial.png`)
 
-    // Step 4: Answer Question 3
-    console.log('\n=== Step 4: Question 3 ===')
-    await page.waitForSelector('text=Where does your heart')
-    await page.waitForTimeout(2000)
-    await page.click('button:has-text("Looking back")')
-    await page.waitForTimeout(500)
+      // Wait for image to load
+      console.log('2. Waiting for image to load...')
+      await page.waitForSelector('img[alt="Your Singapore moment"]', { timeout: 10000 }).catch(() => {})
+      await page.waitForTimeout(2000)
 
-    // Step 5: Camera page - we'll need to provide a test image
-    console.log('\n=== Step 5: Camera Page ===')
-    await page.waitForSelector('text=Position yourself')
+      // Screenshot after image loads
+      await page.screenshot({ path: path.join(outputDir, `${i + 1}-${profile}-image-loaded.png`) })
+      console.log(`   Screenshot: ${i + 1}-${profile}-image-loaded.png`)
 
-    // The camera page has a file input hidden - let's check if we can use it
-    // Or we need to interact with the camera
-    console.log('Camera page loaded. Need to capture/upload a photo.')
-    console.log('This test requires manual interaction or mocking.')
+      // Wait for card generation
+      console.log('3. Waiting for card generation...')
+      let lastStatus = ''
+      for (let j = 0; j < 60; j++) {
+        await page.waitForTimeout(1000)
 
-    // For now, let's just verify we got to the camera page
-    const cameraUrl = page.url()
-    console.log('Current URL:', cameraUrl)
+        const creating = await page.locator('text=Creating your card').isVisible().catch(() => false)
+        const uploading = await page.locator('text=Uploading').isVisible().catch(() => false)
+        const ready = await page.locator('text=Scan to Download').isVisible().catch(() => false)
+        const error = await page.locator('text=generation failed').isVisible().catch(() => false)
 
-    if (cameraUrl.includes('/camera')) {
-      console.log('✓ Successfully navigated through questions to camera page')
+        const status = creating ? 'creating' : uploading ? 'uploading' : ready ? 'ready' : error ? 'error' : 'loading'
+        if (status !== lastStatus) {
+          console.log(`   Status: ${status}`)
+          lastStatus = status
+        }
+
+        if (ready || error) break
+      }
+
+      // Final screenshot
+      await page.screenshot({ path: path.join(outputDir, `${i + 1}-${profile}-final.png`) })
+      console.log(`   Screenshot: ${i + 1}-${profile}-final.png`)
+
+      // Check if QR code is visible
+      const qrVisible = await page.locator('text=Scan to Download').isVisible().catch(() => false)
+      if (qrVisible) {
+        console.log('   Card generation successful!')
+      } else {
+        console.log('   Card generation may have failed')
+      }
     }
 
-    // Keep browser open for manual testing
-    console.log('\n=== Manual Testing ===')
-    console.log('Browser is open. You can:')
-    console.log('1. Take a photo manually')
-    console.log('2. Wait for generation')
-    console.log('3. Check the result page')
-    console.log('\nWatching for R2 polling requests...')
-    console.log('Press Ctrl+C to close.\n')
+    console.log('\n=== All Tests Complete ===')
+    console.log(`Screenshots saved to: ${outputDir}`)
+    console.log('\nBrowser will stay open for 30 seconds...')
+    await page.waitForTimeout(30000)
 
-    // Keep alive for manual interaction
-    await page.waitForTimeout(300000) // 5 minutes
-
-  } catch (error) {
-    console.error('Test error:', error)
+  } catch (err) {
+    console.error('Test failed:', err)
+    await page.screenshot({ path: path.join(outputDir, 'error.png') })
   } finally {
     await browser.close()
   }
 }
 
-testResultPage()
+testResultPage().catch(console.error)

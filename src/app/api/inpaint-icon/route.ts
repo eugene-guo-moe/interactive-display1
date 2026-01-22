@@ -16,10 +16,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing card image" }, { status: 400 });
     }
 
-    // Convert base64 to data URL if needed
-    const imageDataUrl = cardImageBase64.startsWith('data:')
-      ? cardImageBase64
-      : `data:image/png;base64,${cardImageBase64}`;
+    // Convert base64 data URL to Blob for upload
+    const base64Data = cardImageBase64.startsWith('data:')
+      ? cardImageBase64.split(',')[1]
+      : cardImageBase64;
+
+    // Decode base64 to binary
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const imageBlob = new Blob([bytes], { type: 'image/png' });
+
+    // Upload to FAL storage
+    console.log('Uploading image to FAL storage...');
+    const imageUrl = await fal.storage.upload(imageBlob);
+    console.log('Image uploaded to FAL:', imageUrl);
 
     // Create mask - white rectangle where icon should be (bottom center of image area)
     // Card is 540x960, image area starts at ~y=70 and ends at ~y=470
@@ -43,9 +56,10 @@ IMPORTANT:
 - The icon should be a stylized handshake, not an emoji.
 `.trim();
 
+    console.log('Starting inpainting...');
     const result = await fal.subscribe("fal-ai/flux-pro/v1/fill", {
       input: {
-        image_url: imageDataUrl,
+        image_url: imageUrl,
         mask_url: maskCanvas,
         prompt,
         num_images: 1,
@@ -55,9 +69,10 @@ IMPORTANT:
     // Get the result image URL
     const resultData = result.data as { images?: { url: string }[] };
     const outputUrl = resultData?.images?.[0]?.url;
+    console.log('Inpainting result:', outputUrl ? 'success' : 'no output');
 
     if (!outputUrl) {
-      console.error("No output from FAL inpainting:", result);
+      console.error("No output from FAL inpainting:", JSON.stringify(result));
       return NextResponse.json({ error: "Inpainting failed" }, { status: 500 });
     }
 

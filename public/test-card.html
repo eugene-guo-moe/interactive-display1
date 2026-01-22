@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Card Generation Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      padding: 20px;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    button {
+      background: #10B981;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #059669;
+    }
+    .preview {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .card-container {
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      background: #333;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Card Generation Test</h1>
+
+  <div class="controls">
+    <button onclick="generateCard()">Generate & Download Card</button>
+    <button onclick="generateAllCards()">Generate All 3 Cards</button>
+  </div>
+
+  <div class="status" id="status">Ready</div>
+
+  <div class="preview">
+    <!-- Card preview -->
+    <div class="card-container">
+      <div id="card" style="
+        width: 540px;
+        height: 960px;
+        background-color: #0a0a0a;
+        font-family: system-ui, -apple-system, sans-serif;
+      ">
+        <div style="
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          padding: 24px;
+        ">
+          <!-- School logo -->
+          <div style="text-align: center; margin-bottom: 16px;">
+            <img
+              id="logo"
+              src="http://localhost:3004/school-logo.png"
+              alt="Riverside Secondary School"
+              style="height: 60px; margin: 0 auto;"
+              crossorigin="anonymous"
+            />
+          </div>
+
+          <!-- Generated image -->
+          <div style="
+            flex: 0 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 3px solid #10B981;
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+          ">
+            <img
+              id="mainImage"
+              src="https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png"
+              alt="Your Singapore moment"
+              style="width: 100%; height: auto; display: block;"
+              crossorigin="anonymous"
+            />
+          </div>
+
+          <!-- Profile info -->
+          <div style="
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            padding: 20px 0;
+          ">
+            <div style="font-size: 48px; margin-bottom: 8px;">🤝</div>
+            <h2 style="
+              font-size: 28px;
+              font-weight: 700;
+              color: #10B981;
+              margin: 0 0 8px 0;
+              text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+            ">
+              The Community Builder
+            </h2>
+            <p style="
+              font-size: 16px;
+              color: rgba(255,255,255,0.7);
+              font-style: italic;
+              margin: 0 0 16px 0;
+              padding: 0 16px;
+            ">
+              "You believe Singapore thrives when we strengthen our bonds."
+            </p>
+
+            <!-- Description -->
+            <p style="
+              font-size: 14px;
+              color: rgba(255,255,255,0.6);
+              line-height: 1.6;
+              margin: 0 0 12px 0;
+              padding: 0 8px;
+            ">
+              You see Singapore's greatest asset in its people. You value the gotong royong spirit that helped build our nation and believe strong communities are the foundation of our success.
+            </p>
+
+            <!-- Strength -->
+            <p style="
+              font-size: 14px;
+              font-weight: 600;
+              color: #10B981;
+              margin: 0;
+              padding: 0 8px;
+            ">
+              Your strength: You strengthen the social fabric that holds Singapore together.
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="
+            text-align: center;
+            border-top: 1px solid rgba(16, 185, 129, 0.3);
+            padding-top: 16px;
+          ">
+            <p style="font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin: 0;">
+              RIVERSIDE SECONDARY SCHOOL, SINGAPORE
+            </p>
+            <p style="font-size: 10px; color: rgba(255,255,255,0.3); margin: 4px 0 0 0;">
+              Powered by AI
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const testImages = [
+      'https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png',
+      'https://v3b.fal.media/files/b/0a8b601a/zeUa63VI3LQBbsXfDPWvt.png',
+      'https://v3b.fal.media/files/b/0a8b601b/tx5bYSfl10kEBQpCn32ng.png'
+    ];
+
+    function updateStatus(msg) {
+      document.getElementById('status').textContent = msg;
+      console.log(msg);
+    }
+
+    async function generateCard() {
+      const card = document.getElementById('card');
+      updateStatus('Generating card...');
+
+      try {
+        const dataUrl = await htmlToImage.toPng(card, {
+          quality: 1,
+          pixelRatio: 2,
+          cacheBust: true,
+        });
+
+        const link = document.createElement('a');
+        link.download = `test-card-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        updateStatus('Card downloaded! Size: ' + Math.round(dataUrl.length / 1024) + ' KB');
+      } catch (err) {
+        updateStatus('Error: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    async function generateAllCards() {
+      updateStatus('Generating all 3 cards...');
+
+      for (let i = 0; i < testImages.length; i++) {
+        updateStatus(`Generating card ${i + 1}/3...`);
+
+        // Update the image
+        document.getElementById('mainImage').src = testImages[i];
+
+        // Wait for image to load
+        await new Promise(resolve => {
+          const img = document.getElementById('mainImage');
+          if (img.complete) {
+            resolve();
+          } else {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }
+        });
+
+        // Wait a bit more for rendering
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Generate card
+        try {
+          const card = document.getElementById('card');
+          const dataUrl = await htmlToImage.toPng(card, {
+            quality: 1,
+            pixelRatio: 2,
+            cacheBust: true,
+          });
+
+          const link = document.createElement('a');
+          link.download = `test-card-${i + 1}.png`;
+          link.href = dataUrl;
+          link.click();
+
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err) {
+          updateStatus(`Error on card ${i + 1}: ` + err.message);
+          console.error(err);
+        }
+      }
+
+      updateStatus('All 3 cards generated!');
+    }
+
+    // Wait for images to load
+    window.onload = () => {
+      updateStatus('Ready - images loaded');
+    };
+  </script>
+</body>
+</html>
