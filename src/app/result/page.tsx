@@ -397,7 +397,15 @@ function ResultPageContent() {
 
       {/* Profile Header */}
       <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-2 text-center shrink-0">
-        <div className="text-3xl sm:text-4xl mb-2">{profile.emoji}</div>
+        <div className="mb-2 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={profile.icon}
+            alt={profile.title}
+            className="w-10 h-10 sm:w-12 sm:h-12"
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
+        </div>
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
@@ -605,50 +613,72 @@ function ResultPageContent() {
             />
           </div>
 
-          {/* Generated image with frame - NO emoji badge (will be added via AI inpainting) */}
+          {/* Generated image with frame and icon badge */}
           <div style={{
             flex: '0 0 auto',
             borderRadius: '12px',
-            overflow: 'hidden',
-            border: `2px solid ${currentStyle.color}`,
-            boxShadow: `0 4px 24px ${currentStyle.color}35`,
-            maxHeight: '400px',
+            overflow: 'visible',
             position: 'relative',
+            marginBottom: '24px',
           }}>
-            {(imageBase64 || displayImageUrl) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={imageBase64 || displayImageUrl || ''}
-                alt="Your Singapore moment"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                crossOrigin="anonymous"
-              />
-            )}
+            <div style={{
+              borderRadius: '12px',
+              overflow: 'hidden',
+              border: `2px solid ${currentStyle.color}`,
+              boxShadow: `0 4px 24px ${currentStyle.color}35`,
+              maxHeight: '400px',
+            }}>
+              {(imageBase64 || displayImageUrl) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageBase64 || displayImageUrl || ''}
+                  alt="Your Singapore moment"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  crossOrigin="anonymous"
+                />
+              )}
 
-            {/* Subtle vignette overlay */}
+              {/* Subtle vignette overlay */}
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '80px',
+                background: 'linear-gradient(to top, rgba(10,10,10,0.5) 0%, transparent 100%)',
+                pointerEvents: 'none',
+                borderRadius: '0 0 10px 10px',
+              }} />
+            </div>
+
+            {/* Profile icon badge */}
             <div style={{
               position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '80px',
-              background: 'linear-gradient(to top, rgba(10,10,10,0.5) 0%, transparent 100%)',
-              pointerEvents: 'none',
-              borderRadius: '0 0 10px 10px',
-            }} />
-
-            {/* Placeholder circle for AI inpainting target area */}
-            <div style={{
-              position: 'absolute',
-              bottom: '-24px',
+              bottom: '-20px',
               left: '50%',
               transform: 'translateX(-50%)',
-              width: '52px',
-              height: '52px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
-              background: `radial-gradient(circle, ${currentStyle.color}30 0%, ${currentStyle.color}10 70%, transparent 100%)`,
-              pointerEvents: 'none',
-            }} />
+              background: '#1a1a1a',
+              border: `2px solid ${currentStyle.color}`,
+              boxShadow: `0 2px 12px ${currentStyle.color}40`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '8px',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={profile.icon}
+                alt={profile.title}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  filter: 'brightness(0) invert(1)',
+                }}
+              />
+            </div>
           </div>
 
           {/* Profile info section */}
