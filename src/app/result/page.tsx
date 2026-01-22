@@ -586,16 +586,26 @@ function ResultPageContent() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '24px',
+          padding: '20px 24px',
         }}>
-          {/* School logo */}
-          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/school-logo.png"
-              alt="Riverside Secondary School"
-              style={{ height: '60px', margin: '0 auto' }}
-            />
+          {/* School logo with white background for visibility */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '12px',
+          }}>
+            <div style={{
+              display: 'inline-block',
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '8px 16px',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/school-logo.png"
+                alt="Riverside Secondary School"
+                style={{ height: '48px', display: 'block' }}
+              />
+            </div>
           </div>
 
           {/* Generated image - use base64 version to avoid CORS issues */}
@@ -605,7 +615,7 @@ function ResultPageContent() {
             overflow: 'hidden',
             border: `3px solid ${currentStyle.color}`,
             boxShadow: `0 8px 32px ${currentStyle.color}40`,
-            maxHeight: '450px',
+            maxHeight: '350px',
           }}>
             {(imageBase64 || displayImageUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -625,46 +635,46 @@ function ResultPageContent() {
             flexDirection: 'column',
             justifyContent: 'center',
             textAlign: 'center',
-            padding: '20px 0',
+            padding: '12px 0',
           }}>
             {/* Emoji and title */}
-            <div style={{ fontSize: '48px', marginBottom: '8px' }}>{profile.emoji}</div>
+            <div style={{ fontSize: '36px', marginBottom: '4px' }}>{profile.emoji}</div>
             <h2 style={{
-              fontSize: '28px',
+              fontSize: '26px',
               fontWeight: 700,
               color: currentStyle.color,
-              marginBottom: '8px',
+              marginBottom: '6px',
               textShadow: `0 0 30px ${currentStyle.color}60`,
             }}>
               {profile.title}
             </h2>
             <p style={{
-              fontSize: '16px',
-              color: 'rgba(255,255,255,0.7)',
+              fontSize: '14px',
+              color: 'rgba(255,255,255,0.75)',
               fontStyle: 'italic',
-              marginBottom: '16px',
-              padding: '0 16px',
+              marginBottom: '12px',
+              padding: '0 12px',
             }}>
               &ldquo;{profile.tagline}&rdquo;
             </p>
 
             {/* Description */}
             <p style={{
-              fontSize: '14px',
-              color: 'rgba(255,255,255,0.6)',
-              lineHeight: 1.6,
-              marginBottom: '12px',
-              padding: '0 8px',
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.65)',
+              lineHeight: 1.5,
+              marginBottom: '10px',
+              padding: '0 12px',
             }}>
               {profile.description}
             </p>
 
             {/* Strength */}
             <p style={{
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: 600,
               color: currentStyle.color,
-              padding: '0 8px',
+              padding: '0 12px',
             }}>
               Your strength: {profile.strength}
             </p>
@@ -674,12 +684,13 @@ function ResultPageContent() {
           <div style={{
             textAlign: 'center',
             borderTop: `1px solid ${currentStyle.color}30`,
-            paddingTop: '16px',
+            paddingTop: '12px',
+            marginTop: 'auto',
           }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '1px' }}>
               RIVERSIDE SECONDARY SCHOOL, SINGAPORE
             </p>
-            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
+            <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
               Powered by AI
             </p>
           </div>
