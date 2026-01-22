@@ -586,14 +586,13 @@ function ResultPageContent() {
           height: '100%',
           padding: '24px',
         }}>
-          {/* School logo - use absolute URL for proper rendering */}
+          {/* School logo */}
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={typeof window !== 'undefined' ? `${window.location.origin}/school-logo.png` : '/school-logo.png'}
+              src="/school-logo.png"
               alt="Riverside Secondary School"
               style={{ height: '60px', margin: '0 auto' }}
-              crossOrigin="anonymous"
             />
           </div>
 
