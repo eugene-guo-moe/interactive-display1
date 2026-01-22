@@ -182,47 +182,12 @@ function ResultPageContent() {
         backgroundColor: '#0a0a0a',
       })
 
-      console.log('Base card generated, calling inpainting API...')
-      setCardStatus('generating') // Still generating while inpainting
-
-      // Call inpainting API to add 3D icon badge
-      let finalCardDataUrl = baseCardDataUrl
-      try {
-        const inpaintResponse = await fetch('/api/inpaint-icon', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cardImageBase64: baseCardDataUrl,
-            profileColor: currentStyle?.color || '#10b981',
-            profileEmoji: profile?.emoji || '🤝',
-          }),
-        })
-
-        if (inpaintResponse.ok) {
-          const inpaintData = await inpaintResponse.json()
-          if (inpaintData.imageUrl) {
-            console.log('Inpainting successful, fetching result...')
-            // Fetch the inpainted image and convert to data URL
-            const imgResponse = await fetch(inpaintData.imageUrl)
-            const blob = await imgResponse.blob()
-            finalCardDataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader()
-              reader.onloadend = () => resolve(reader.result as string)
-              reader.readAsDataURL(blob)
-            })
-          }
-        } else {
-          console.warn('Inpainting failed, using base card')
-        }
-      } catch (inpaintErr) {
-        console.warn('Inpainting error, using base card:', inpaintErr)
-      }
-
-      setCardDataUrl(finalCardDataUrl)
+      console.log('Card generated successfully')
+      setCardDataUrl(baseCardDataUrl)
       setCardStatus('uploading')
 
       // Extract base64 data for upload
-      const base64Data = finalCardDataUrl.split(',')[1]
+      const base64Data = baseCardDataUrl.split(',')[1]
       const cardPath = `cards/${profileType}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`
 
       // Upload to R2 via worker
