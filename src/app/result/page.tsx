@@ -179,6 +179,7 @@ function ResultPageContent() {
         pixelRatio: 2,
         cacheBust: true,
         skipFonts: true,
+        backgroundColor: '#0a0a0a',
       })
 
       setCardDataUrl(dataUrl)
@@ -564,7 +565,7 @@ function ResultPageContent() {
         </div>
       )}
 
-      {/* Hidden card for generation - visible but behind everything for proper rendering */}
+      {/* Hidden card for generation - positioned behind main content */}
       <div
         ref={cardRef}
         style={{
@@ -575,9 +576,9 @@ function ResultPageContent() {
           height: '960px',
           backgroundColor: '#0a0a0a',
           fontFamily: 'system-ui, -apple-system, sans-serif',
-          zIndex: -1,
-          opacity: 0.01, // Nearly invisible but still renders
+          zIndex: -9999,
           pointerEvents: 'none',
+          overflow: 'hidden',
         }}
       >
         {/* Card content */}
