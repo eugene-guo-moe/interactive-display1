@@ -173,8 +173,8 @@ function ResultPageContent() {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      // Generate card image - skip fonts to avoid CSP blocking external font fetch
-      const dataUrl = await toPng(cardRef.current, {
+      // Generate base card image - skip fonts to avoid CSP blocking external font fetch
+      const baseCardDataUrl = await toPng(cardRef.current, {
         quality: 1,
         pixelRatio: 2,
         cacheBust: true,
@@ -182,11 +182,47 @@ function ResultPageContent() {
         backgroundColor: '#0a0a0a',
       })
 
-      setCardDataUrl(dataUrl)
+      console.log('Base card generated, calling inpainting API...')
+      setCardStatus('generating') // Still generating while inpainting
+
+      // Call inpainting API to add 3D icon badge
+      let finalCardDataUrl = baseCardDataUrl
+      try {
+        const inpaintResponse = await fetch('/api/inpaint-icon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cardImageBase64: baseCardDataUrl,
+            profileColor: currentStyle?.color || '#10b981',
+            profileEmoji: profile?.emoji || '🤝',
+          }),
+        })
+
+        if (inpaintResponse.ok) {
+          const inpaintData = await inpaintResponse.json()
+          if (inpaintData.imageUrl) {
+            console.log('Inpainting successful, fetching result...')
+            // Fetch the inpainted image and convert to data URL
+            const imgResponse = await fetch(inpaintData.imageUrl)
+            const blob = await imgResponse.blob()
+            finalCardDataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.readAsDataURL(blob)
+            })
+          }
+        } else {
+          console.warn('Inpainting failed, using base card')
+        }
+      } catch (inpaintErr) {
+        console.warn('Inpainting error, using base card:', inpaintErr)
+      }
+
+      setCardDataUrl(finalCardDataUrl)
       setCardStatus('uploading')
 
       // Extract base64 data for upload
-      const base64Data = dataUrl.split(',')[1]
+      const base64Data = finalCardDataUrl.split(',')[1]
       const cardPath = `cards/${profileType}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`
 
       // Upload to R2 via worker
@@ -218,7 +254,7 @@ function ResultPageContent() {
       }
       setCardStatus('error')
     }
-  }, [displayImageUrl, profileType, setQrUrl, imageBase64, convertImageToBase64])
+  }, [displayImageUrl, profileType, setQrUrl, imageBase64, convertImageToBase64, currentStyle, profile])
 
   // Start card generation when image is loaded
   useEffect(() => {
@@ -574,7 +610,7 @@ function ResultPageContent() {
           top: 0,
           width: '540px',
           height: '960px',
-          backgroundColor: '#0a0a0a',
+          background: `radial-gradient(ellipse at 50% 100%, ${currentStyle.color}15 0%, #0a0a0a 50%), #0a0a0a`,
           fontFamily: 'system-ui, -apple-system, sans-serif',
           zIndex: -9999,
           pointerEvents: 'none',
@@ -586,36 +622,33 @@ function ResultPageContent() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '20px 24px',
+          padding: '16px 20px',
         }}>
-          {/* School logo with white background for visibility */}
+          {/* School logo - white version for dark background */}
           <div style={{
             textAlign: 'center',
-            marginBottom: '12px',
+            marginBottom: '10px',
           }}>
-            <div style={{
-              display: 'inline-block',
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '8px 16px',
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/school-logo.png"
-                alt="Riverside Secondary School"
-                style={{ height: '48px', display: 'block' }}
-              />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/school-logo.png"
+              alt="Riverside Secondary School"
+              style={{
+                height: '44px',
+                filter: 'brightness(0) invert(1)',
+              }}
+            />
           </div>
 
-          {/* Generated image - use base64 version to avoid CORS issues */}
+          {/* Generated image with frame - NO emoji badge (will be added via AI inpainting) */}
           <div style={{
             flex: '0 0 auto',
-            borderRadius: '16px',
+            borderRadius: '12px',
             overflow: 'hidden',
-            border: `3px solid ${currentStyle.color}`,
-            boxShadow: `0 8px 32px ${currentStyle.color}40`,
-            maxHeight: '350px',
+            border: `2px solid ${currentStyle.color}`,
+            boxShadow: `0 4px 24px ${currentStyle.color}35`,
+            maxHeight: '400px',
+            position: 'relative',
           }}>
             {(imageBase64 || displayImageUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -626,71 +659,85 @@ function ResultPageContent() {
                 crossOrigin="anonymous"
               />
             )}
+
+            {/* Subtle vignette overlay */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(10,10,10,0.5) 0%, transparent 100%)',
+              pointerEvents: 'none',
+              borderRadius: '0 0 10px 10px',
+            }} />
+
+            {/* Placeholder circle for AI inpainting target area */}
+            <div style={{
+              position: 'absolute',
+              bottom: '-24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${currentStyle.color}30 0%, ${currentStyle.color}10 70%, transparent 100%)`,
+              pointerEvents: 'none',
+            }} />
           </div>
 
-          {/* Profile info */}
+          {/* Profile info section */}
           <div style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             textAlign: 'center',
-            padding: '12px 0',
+            padding: '8px 12px',
           }}>
-            {/* Emoji and title */}
-            <div style={{ fontSize: '36px', marginBottom: '4px' }}>{profile.emoji}</div>
+            {/* Title */}
             <h2 style={{
-              fontSize: '26px',
+              fontSize: '28px',
               fontWeight: 700,
               color: currentStyle.color,
-              marginBottom: '6px',
-              textShadow: `0 0 30px ${currentStyle.color}60`,
+              marginBottom: '10px',
+              textShadow: `0 0 30px ${currentStyle.color}50`,
             }}>
               {profile.title}
             </h2>
-            <p style={{
-              fontSize: '14px',
-              color: 'rgba(255,255,255,0.75)',
-              fontStyle: 'italic',
-              marginBottom: '12px',
-              padding: '0 12px',
-            }}>
-              &ldquo;{profile.tagline}&rdquo;
-            </p>
 
             {/* Description */}
             <p style={{
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.65)',
-              lineHeight: 1.5,
-              marginBottom: '10px',
-              padding: '0 12px',
+              fontSize: '13px',
+              color: '#D0D0D0',
+              lineHeight: 1.55,
+              marginBottom: '12px',
+              padding: '0 8px',
             }}>
               {profile.description}
             </p>
 
             {/* Strength */}
             <p style={{
-              fontSize: '12px',
+              fontSize: '13px',
               fontWeight: 600,
               color: currentStyle.color,
-              padding: '0 12px',
+              padding: '0 8px',
             }}>
               Your strength: {profile.strength}
             </p>
           </div>
 
-          {/* Footer */}
+          {/* Footer - simple */}
           <div style={{
             textAlign: 'center',
             borderTop: `1px solid ${currentStyle.color}30`,
-            paddingTop: '12px',
-            marginTop: 'auto',
+            paddingTop: '10px',
           }}>
             <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '1px' }}>
               RIVERSIDE SECONDARY SCHOOL, SINGAPORE
             </p>
-            <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+            <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '3px' }}>
               Powered by AI
             </p>
           </div>
