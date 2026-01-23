@@ -956,6 +956,19 @@ export default {
 
       const imageUrl = `${env.PUBLIC_URL}/${imagePath}`
 
+      // Extract profile type from path for accent color
+      const profileMatch = imagePath.match(/^cards\/([\w-]+)\//)
+      const profileType = profileMatch?.[1] || 'builder'
+      const profileColors: Record<string, string> = {
+        guardian: '#F59E0B',
+        builder: '#10B981',
+        shaper: '#6366F1',
+        'guardian-builder': '#F59E0B',
+        'builder-shaper': '#14B8A6',
+        'adaptive-guardian': '#8B5CF6',
+      }
+      const accentColor = profileColors[profileType] || '#10B981'
+
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -978,13 +991,39 @@ export default {
       justify-content: center;
       padding: 20px;
       padding-bottom: max(20px, env(safe-area-inset-bottom));
+      overflow: hidden;
+    }
+    .glow {
+      position: fixed;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: ${accentColor};
+      opacity: 0.12;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    .content {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.5s ease-out 0.15s forwards;
+    }
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
     }
     .card-image {
       width: 100%;
-      max-width: 360px;
+      max-width: 340px;
       border-radius: 16px;
-      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-      margin-bottom: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px ${accentColor}20;
+      margin-bottom: 28px;
     }
     .save-btn {
       display: flex;
@@ -992,46 +1031,58 @@ export default {
       justify-content: center;
       gap: 10px;
       width: 100%;
-      max-width: 360px;
-      padding: 16px 24px;
-      border-radius: 14px;
+      max-width: 300px;
+      padding: 15px 28px;
+      border-radius: 99px;
       border: none;
       background: white;
       color: #111;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      transition: transform 0.1s, opacity 0.1s;
+      box-shadow: 0 4px 20px rgba(255,255,255,0.15);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .save-btn:active { transform: scale(0.97); opacity: 0.9; }
-    .save-btn svg { width: 22px; height: 22px; }
+    .save-btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 2px 10px rgba(255,255,255,0.1);
+    }
+    .save-btn:disabled { opacity: 0.7; }
+    .save-btn svg { width: 20px; height: 20px; }
     .hint {
-      margin-top: 14px;
-      font-size: 13px;
-      color: rgba(255,255,255,0.4);
+      margin-top: 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.3);
       text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
+    .hint.visible { opacity: 1; }
     .spinner {
-      width: 22px;
-      height: 22px;
-      border: 2.5px solid #ccc;
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid #ddd;
       border-top-color: #111;
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .success { color: #10B981; }
   </style>
 </head>
 <body>
-  <img class="card-image" src="${imageUrl}" alt="Your Singapore Profile Card">
-  <button class="save-btn" id="saveBtn" onclick="saveImage()">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-    </svg>
-    Save to Gallery
-  </button>
-  <p class="hint" id="hint">Saves directly to your photo gallery</p>
+  <div class="glow"></div>
+  <div class="content">
+    <img class="card-image" src="${imageUrl}" alt="Your Singapore Profile Card">
+    <button class="save-btn" id="saveBtn" onclick="saveImage()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      Save to Gallery
+    </button>
+    <p class="hint" id="hint"></p>
+  </div>
 
   <script>
     const imageUrl = "${imageUrl}";
@@ -1055,7 +1106,8 @@ export default {
             title: 'My Singapore Profile Card',
           });
           btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Saved!';
-          hint.textContent = '';
+          btn.classList.add('success');
+          hint.classList.remove('visible');
           return;
         }
 
@@ -1070,18 +1122,20 @@ export default {
         URL.revokeObjectURL(url);
         btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Downloaded!';
         hint.textContent = 'Check your Downloads folder';
+        hint.classList.add('visible');
       } catch (err) {
         if (err.name === 'AbortError') {
           // User cancelled the share sheet
           btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Save to Gallery';
           btn.disabled = false;
-          hint.textContent = 'Saves directly to your photo gallery';
+          hint.classList.remove('visible');
           return;
         }
         // Long-press fallback
         btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Save to Gallery';
         btn.disabled = false;
         hint.textContent = 'Long-press the image above to save';
+        hint.classList.add('visible');
       }
     }
   </script>
