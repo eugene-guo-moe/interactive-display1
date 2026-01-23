@@ -231,8 +231,8 @@ function ResultPageContent() {
   }, [imageLoaded, displayImageUrl, generateAndUploadCard])
 
   const handleStartOver = () => {
-    resetQuiz()
     router.push('/')
+    resetQuiz()
   }
 
   const handleDownload = () => {
