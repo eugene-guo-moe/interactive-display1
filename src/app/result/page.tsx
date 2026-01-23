@@ -575,148 +575,180 @@ function ResultPageContent() {
           top: 0,
           width: '540px',
           height: '960px',
-          background: `radial-gradient(ellipse at 50% 100%, ${currentStyle.color}15 0%, #0a0a0a 50%), #0a0a0a`,
+          background: `radial-gradient(circle at 50% 40%, ${currentStyle.color}20 0%, transparent 60%), #0a0a0a`,
           fontFamily: 'system-ui, -apple-system, sans-serif',
           zIndex: -9999,
           pointerEvents: 'none',
           overflow: 'hidden',
         }}
       >
-        {/* Card content */}
+        {/* Card content - mirrors the page display layout */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           height: '100%',
-          padding: '16px 20px',
+          padding: '20px 24px',
         }}>
-          {/* School logo - white version for dark background */}
-          <div style={{
+          {/* School name text at top */}
+          <p style={{
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.4)',
+            letterSpacing: '2px',
             textAlign: 'center',
-            marginBottom: '10px',
+            marginBottom: '16px',
           }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/school-logo.png"
-              alt="Riverside Secondary School"
-              style={{
-                height: '44px',
-                filter: 'brightness(0) invert(1)',
-              }}
-            />
+            RIVERSIDE SECONDARY SCHOOL, SINGAPORE
+          </p>
+
+          {/* Profile emoji */}
+          <div style={{
+            fontSize: '36px',
+            marginBottom: '8px',
+          }}>
+            {profile.emoji}
           </div>
 
-          {/* Generated image with frame and emoji badge */}
-          <div style={{
-            flex: '0 0 auto',
-            borderRadius: '12px',
-            overflow: 'visible',
-            position: 'relative',
-            marginBottom: '24px',
+          {/* Profile title */}
+          <h2 style={{
+            fontSize: '26px',
+            fontWeight: 700,
+            color: currentStyle.color,
+            textAlign: 'center',
+            marginBottom: '6px',
+            textShadow: `0 0 40px ${currentStyle.color}40`,
           }}>
+            {profile.title}
+          </h2>
+
+          {/* Tagline in quotes */}
+          <p style={{
+            fontSize: '13px',
+            color: 'rgba(255,255,255,0.7)',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            marginBottom: '16px',
+            padding: '0 16px',
+          }}>
+            &ldquo;{profile.tagline}&rdquo;
+          </p>
+
+          {/* Image with decorative corner brackets */}
+          <div style={{
+            position: 'relative',
+            width: '85%',
+            maxWidth: '420px',
+            marginBottom: '20px',
+          }}>
+            {/* Corner decorations */}
+            <div style={{
+              position: 'absolute',
+              top: '-8px',
+              left: '-8px',
+              width: '24px',
+              height: '24px',
+              borderLeft: `2px solid ${currentStyle.color}B0`,
+              borderTop: `2px solid ${currentStyle.color}B0`,
+              borderTopLeftRadius: '8px',
+            }} />
+            <div style={{
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              width: '24px',
+              height: '24px',
+              borderRight: `2px solid ${currentStyle.color}B0`,
+              borderTop: `2px solid ${currentStyle.color}B0`,
+              borderTopRightRadius: '8px',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: '-8px',
+              left: '-8px',
+              width: '24px',
+              height: '24px',
+              borderLeft: `2px solid ${currentStyle.color}B0`,
+              borderBottom: `2px solid ${currentStyle.color}B0`,
+              borderBottomLeftRadius: '8px',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: '-8px',
+              right: '-8px',
+              width: '24px',
+              height: '24px',
+              borderRight: `2px solid ${currentStyle.color}B0`,
+              borderBottom: `2px solid ${currentStyle.color}B0`,
+              borderBottomRightRadius: '8px',
+            }} />
+
+            {/* Image container */}
             <div style={{
               borderRadius: '12px',
               overflow: 'hidden',
-              border: `2px solid ${currentStyle.color}`,
-              boxShadow: `0 4px 24px ${currentStyle.color}35`,
-              maxHeight: '400px',
+              boxShadow: `0 25px 50px -12px ${currentStyle.color}40`,
+              outline: `1px solid ${currentStyle.color}30`,
             }}>
               {(imageBase64 || displayImageUrl) && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={imageBase64 || displayImageUrl || ''}
                   alt="Your Singapore moment"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  style={{ width: '100%', height: 'auto', maxHeight: '380px', objectFit: 'cover', display: 'block' }}
                   crossOrigin="anonymous"
                 />
               )}
 
-              {/* Subtle vignette overlay */}
+              {/* AI Generated badge */}
               <div style={{
                 position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: '80px',
-                background: 'linear-gradient(to top, rgba(10,10,10,0.5) 0%, transparent 100%)',
-                pointerEvents: 'none',
-                borderRadius: '0 0 10px 10px',
-              }} />
-            </div>
-
-            {/* Profile emoji badge */}
-            <div style={{
-              position: 'absolute',
-              bottom: '-20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              background: '#1a1a1a',
-              border: `2px solid ${currentStyle.color}`,
-              boxShadow: `0 2px 12px ${currentStyle.color}40`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '20px',
-            }}>
-              {profile.emoji}
+                top: '12px',
+                left: '12px',
+                padding: '6px 12px',
+                borderRadius: '9999px',
+                backgroundColor: `${currentStyle.color}E6`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                </svg>
+                <span style={{ color: 'white', fontSize: '11px', fontWeight: 600 }}>AI Generated</span>
+              </div>
             </div>
           </div>
 
-          {/* Profile info section */}
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
+          {/* Description */}
+          <p style={{
+            fontSize: '13px',
+            color: 'rgba(255,255,255,0.6)',
+            lineHeight: 1.6,
             textAlign: 'center',
-            padding: '8px 12px',
+            marginBottom: '10px',
+            padding: '0 12px',
           }}>
-            {/* Title */}
-            <h2 style={{
-              fontSize: '28px',
-              fontWeight: 700,
-              color: currentStyle.color,
-              marginBottom: '10px',
-              textShadow: `0 0 30px ${currentStyle.color}50`,
-            }}>
-              {profile.title}
-            </h2>
+            {profile.description}
+          </p>
 
-            {/* Description */}
-            <p style={{
-              fontSize: '13px',
-              color: '#D0D0D0',
-              lineHeight: 1.55,
-              marginBottom: '12px',
-              padding: '0 8px',
-            }}>
-              {profile.description}
-            </p>
-
-            {/* Strength */}
-            <p style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: currentStyle.color,
-              padding: '0 8px',
-            }}>
-              Your strength: {profile.strength}
-            </p>
-          </div>
-
-          {/* Footer - simple */}
-          <div style={{
+          {/* Strength */}
+          <p style={{
+            fontSize: '13px',
+            fontWeight: 600,
+            color: currentStyle.color,
             textAlign: 'center',
-            borderTop: `1px solid ${currentStyle.color}30`,
-            paddingTop: '10px',
           }}>
-            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '1px' }}>
-              RIVERSIDE SECONDARY SCHOOL, SINGAPORE
-            </p>
-            <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '3px' }}>
-              Powered by AI
+            Your strength: {profile.strength}
+          </p>
+
+          {/* Footer */}
+          <div style={{
+            marginTop: 'auto',
+            textAlign: 'center',
+            paddingTop: '12px',
+          }}>
+            <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)' }}>
+              Powered by AI • Made with love in Singapore
             </p>
           </div>
         </div>
