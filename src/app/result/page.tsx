@@ -606,7 +606,6 @@ function ResultPageContent() {
               alt="Riverside Secondary School"
               style={{
                 height: '52px',
-                opacity: 0.9,
               }}
             />
           </div>
