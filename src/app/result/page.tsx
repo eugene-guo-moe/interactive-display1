@@ -575,7 +575,7 @@ function ResultPageContent() {
           top: 0,
           width: '540px',
           height: '960px',
-          background: `radial-gradient(circle at 50% 40%, ${currentStyle.color}20 0%, transparent 60%), #0a0a0a`,
+          background: `radial-gradient(circle at 50% 35%, ${currentStyle.color}35 0%, ${currentStyle.color}10 30%, transparent 60%), #0a0a0a`,
           fontFamily: 'system-ui, -apple-system, sans-serif',
           zIndex: -9999,
           pointerEvents: 'none',
@@ -588,22 +588,31 @@ function ResultPageContent() {
           flexDirection: 'column',
           alignItems: 'center',
           height: '100%',
-          padding: '20px 24px',
+          padding: '24px 28px',
         }}>
-          {/* School name text at top */}
-          <p style={{
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.4)',
-            letterSpacing: '2px',
-            textAlign: 'center',
-            marginBottom: '16px',
+          {/* School logo + name at top */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            marginBottom: '14px',
           }}>
-            RIVERSIDE SECONDARY SCHOOL, SINGAPORE
-          </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/school-logo.png"
+              alt="Riverside Secondary School"
+              style={{
+                height: '24px',
+                filter: 'brightness(0) invert(1)',
+                opacity: 0.5,
+              }}
+            />
+          </div>
 
           {/* Profile emoji */}
           <div style={{
-            fontSize: '36px',
+            fontSize: '42px',
             marginBottom: '8px',
           }}>
             {profile.emoji}
@@ -611,24 +620,24 @@ function ResultPageContent() {
 
           {/* Profile title */}
           <h2 style={{
-            fontSize: '26px',
+            fontSize: '32px',
             fontWeight: 700,
             color: currentStyle.color,
             textAlign: 'center',
             marginBottom: '6px',
-            textShadow: `0 0 40px ${currentStyle.color}40`,
+            textShadow: `0 0 40px ${currentStyle.color}50`,
           }}>
             {profile.title}
           </h2>
 
           {/* Tagline in quotes */}
           <p style={{
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'rgba(255,255,255,0.7)',
             fontStyle: 'italic',
             textAlign: 'center',
             marginBottom: '16px',
-            padding: '0 16px',
+            padding: '0 20px',
           }}>
             &ldquo;{profile.tagline}&rdquo;
           </p>
@@ -636,49 +645,51 @@ function ResultPageContent() {
           {/* Image with decorative corner brackets */}
           <div style={{
             position: 'relative',
-            width: '85%',
-            maxWidth: '420px',
-            marginBottom: '20px',
+            width: '90%',
+            maxWidth: '460px',
+            marginBottom: '18px',
+            flex: '1 1 auto',
+            minHeight: 0,
           }}>
             {/* Corner decorations */}
             <div style={{
               position: 'absolute',
               top: '-8px',
               left: '-8px',
-              width: '24px',
-              height: '24px',
-              borderLeft: `2px solid ${currentStyle.color}B0`,
-              borderTop: `2px solid ${currentStyle.color}B0`,
+              width: '28px',
+              height: '28px',
+              borderLeft: `2.5px solid ${currentStyle.color}B0`,
+              borderTop: `2.5px solid ${currentStyle.color}B0`,
               borderTopLeftRadius: '8px',
             }} />
             <div style={{
               position: 'absolute',
               top: '-8px',
               right: '-8px',
-              width: '24px',
-              height: '24px',
-              borderRight: `2px solid ${currentStyle.color}B0`,
-              borderTop: `2px solid ${currentStyle.color}B0`,
+              width: '28px',
+              height: '28px',
+              borderRight: `2.5px solid ${currentStyle.color}B0`,
+              borderTop: `2.5px solid ${currentStyle.color}B0`,
               borderTopRightRadius: '8px',
             }} />
             <div style={{
               position: 'absolute',
               bottom: '-8px',
               left: '-8px',
-              width: '24px',
-              height: '24px',
-              borderLeft: `2px solid ${currentStyle.color}B0`,
-              borderBottom: `2px solid ${currentStyle.color}B0`,
+              width: '28px',
+              height: '28px',
+              borderLeft: `2.5px solid ${currentStyle.color}B0`,
+              borderBottom: `2.5px solid ${currentStyle.color}B0`,
               borderBottomLeftRadius: '8px',
             }} />
             <div style={{
               position: 'absolute',
               bottom: '-8px',
               right: '-8px',
-              width: '24px',
-              height: '24px',
-              borderRight: `2px solid ${currentStyle.color}B0`,
-              borderBottom: `2px solid ${currentStyle.color}B0`,
+              width: '28px',
+              height: '28px',
+              borderRight: `2.5px solid ${currentStyle.color}B0`,
+              borderBottom: `2.5px solid ${currentStyle.color}B0`,
               borderBottomRightRadius: '8px',
             }} />
 
@@ -686,57 +697,41 @@ function ResultPageContent() {
             <div style={{
               borderRadius: '12px',
               overflow: 'hidden',
-              boxShadow: `0 25px 50px -12px ${currentStyle.color}40`,
+              boxShadow: `0 25px 50px -12px ${currentStyle.color}50`,
               outline: `1px solid ${currentStyle.color}30`,
+              height: '100%',
             }}>
               {(imageBase64 || displayImageUrl) && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={imageBase64 || displayImageUrl || ''}
                   alt="Your Singapore moment"
-                  style={{ width: '100%', height: 'auto', maxHeight: '380px', objectFit: 'cover', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   crossOrigin="anonymous"
                 />
               )}
-
-              {/* AI Generated badge */}
-              <div style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
-                padding: '6px 12px',
-                borderRadius: '9999px',
-                backgroundColor: `${currentStyle.color}E6`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                </svg>
-                <span style={{ color: 'white', fontSize: '11px', fontWeight: 600 }}>AI Generated</span>
-              </div>
             </div>
           </div>
 
           {/* Description */}
           <p style={{
-            fontSize: '13px',
-            color: 'rgba(255,255,255,0.6)',
+            fontSize: '14px',
+            color: 'rgba(255,255,255,0.65)',
             lineHeight: 1.6,
             textAlign: 'center',
             marginBottom: '10px',
-            padding: '0 12px',
+            padding: '0 16px',
           }}>
             {profile.description}
           </p>
 
           {/* Strength */}
           <p style={{
-            fontSize: '13px',
+            fontSize: '15px',
             fontWeight: 600,
             color: currentStyle.color,
             textAlign: 'center',
+            marginBottom: '8px',
           }}>
             Your strength: {profile.strength}
           </p>
@@ -745,9 +740,9 @@ function ResultPageContent() {
           <div style={{
             marginTop: 'auto',
             textAlign: 'center',
-            paddingTop: '12px',
+            paddingTop: '8px',
           }}>
-            <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)' }}>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
               Powered by AI • Made with love in Singapore
             </p>
           </div>
