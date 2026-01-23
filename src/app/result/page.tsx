@@ -397,15 +397,7 @@ function ResultPageContent() {
 
       {/* Profile Header */}
       <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-2 text-center shrink-0">
-        <div className="mb-2 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={profile.icon}
-            alt={profile.title}
-            className="w-10 h-10 sm:w-12 sm:h-12"
-            style={{ filter: 'brightness(0) invert(1)' }}
-          />
-        </div>
+        <div className="text-3xl sm:text-4xl mb-2">{profile.emoji}</div>
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
@@ -613,7 +605,7 @@ function ResultPageContent() {
             />
           </div>
 
-          {/* Generated image with frame and icon badge */}
+          {/* Generated image with frame and emoji badge */}
           <div style={{
             flex: '0 0 auto',
             borderRadius: '12px',
@@ -651,7 +643,7 @@ function ResultPageContent() {
               }} />
             </div>
 
-            {/* Profile icon badge */}
+            {/* Profile emoji badge */}
             <div style={{
               position: 'absolute',
               bottom: '-20px',
@@ -666,18 +658,9 @@ function ResultPageContent() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '8px',
+              fontSize: '20px',
             }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={profile.icon}
-                alt={profile.title}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  filter: 'brightness(0) invert(1)',
-                }}
-              />
+              {profile.emoji}
             </div>
           </div>
 
