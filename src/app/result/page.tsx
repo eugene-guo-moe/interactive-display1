@@ -605,9 +605,9 @@ function ResultPageContent() {
               src="/school-logo.png"
               alt="Riverside Secondary School"
               style={{
-                height: '36px',
+                height: '52px',
                 filter: 'brightness(0) invert(1)',
-                opacity: 0.5,
+                opacity: 0.8,
               }}
             />
           </div>
