@@ -968,6 +968,10 @@ export default {
         'adaptive-guardian': '#8B5CF6',
       }
       const accentColor = profileColors[profileType] || '#10B981'
+      // Amber/gold needs dark text for contrast; the rest use white
+      const btnTextColor = (profileType === 'guardian' || profileType === 'guardian-builder') ? '#1a1a1a' : '#ffffff'
+      const btnSpinnerBorder = (profileType === 'guardian' || profileType === 'guardian-builder') ? '#1a1a1a30' : '#ffffff50'
+      const btnSpinnerTop = btnTextColor
 
       const html = `<!DOCTYPE html>
 <html lang="en">
@@ -1035,18 +1039,18 @@ export default {
       padding: 15px 28px;
       border-radius: 99px;
       border: none;
-      background: white;
-      color: #111;
+      background: ${accentColor};
+      color: ${btnTextColor};
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      box-shadow: 0 4px 20px rgba(255,255,255,0.15);
+      box-shadow: 0 4px 24px ${accentColor}40;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     .save-btn:active {
       transform: scale(0.96);
-      box-shadow: 0 2px 10px rgba(255,255,255,0.1);
+      box-shadow: 0 2px 12px ${accentColor}30;
     }
     .save-btn:disabled { opacity: 0.7; }
     .save-btn svg { width: 20px; height: 20px; }
@@ -1062,13 +1066,12 @@ export default {
     .spinner {
       width: 20px;
       height: 20px;
-      border: 2.5px solid #ddd;
-      border-top-color: #111;
+      border: 2.5px solid ${btnSpinnerBorder};
+      border-top-color: ${btnSpinnerTop};
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .success { color: #10B981; }
   </style>
 </head>
 <body>
@@ -1106,7 +1109,6 @@ export default {
             title: 'My Singapore Profile Card',
           });
           btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Saved!';
-          btn.classList.add('success');
           hint.classList.remove('visible');
           return;
         }
