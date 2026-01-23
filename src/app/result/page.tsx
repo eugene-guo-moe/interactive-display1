@@ -79,8 +79,10 @@ function ResultPageContent() {
   // Use FAL.ai URL for display (fast CDN), or test image in test mode
   const displayImageUrl = isTestMode ? testImage : (resultImageUrl || photoData)
 
-  // QR code shows card URL when ready, otherwise placeholder
-  const qrValue = cardUrl || 'https://riversidesec.pages.dev'
+  // QR code shows card view page (with save button) when ready, otherwise placeholder
+  const qrValue = cardUrl
+    ? cardUrl.replace('/cards/', '/view/cards/')
+    : 'https://riversidesec.pages.dev'
 
   useEffect(() => {
     // Skip redirect in test mode

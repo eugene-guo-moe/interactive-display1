@@ -939,6 +939,164 @@ export default {
       }
     }
 
+    // Serve card landing page for mobile save (QR code points here)
+    if (url.pathname.startsWith('/view/cards/')) {
+      const imagePath = url.pathname.slice('/view/'.length) // e.g. "cards/builder/123.png"
+
+      // Validate path
+      if (!isValidR2Path(imagePath)) {
+        return new Response('Invalid path', { status: 400, headers: allHeaders })
+      }
+
+      // Verify image exists
+      const object = await env.IMAGES_BUCKET.head(imagePath)
+      if (!object) {
+        return new Response('Image not found', { status: 404, headers: allHeaders })
+      }
+
+      const imageUrl = `${env.PUBLIC_URL}/${imagePath}`
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your Singapore Profile Card</title>
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:title" content="My Singapore Profile Card">
+  <meta property="og:description" content="Discover your Singapore profile at Riverside Secondary School">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0a0a0a;
+      color: white;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    .card-image {
+      width: 100%;
+      max-width: 360px;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+      margin-bottom: 24px;
+    }
+    .save-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 360px;
+      padding: 16px 24px;
+      border-radius: 14px;
+      border: none;
+      background: white;
+      color: #111;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+    .save-btn:active { transform: scale(0.97); opacity: 0.9; }
+    .save-btn svg { width: 22px; height: 22px; }
+    .hint {
+      margin-top: 14px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+    }
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid #ccc;
+      border-top-color: #111;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <img class="card-image" src="${imageUrl}" alt="Your Singapore Profile Card">
+  <button class="save-btn" id="saveBtn" onclick="saveImage()">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+    </svg>
+    Save to Gallery
+  </button>
+  <p class="hint" id="hint">Saves directly to your photo gallery</p>
+
+  <script>
+    const imageUrl = "${imageUrl}";
+
+    async function saveImage() {
+      const btn = document.getElementById('saveBtn');
+      const hint = document.getElementById('hint');
+      btn.innerHTML = '<div class="spinner"></div> Saving...';
+      btn.disabled = true;
+
+      try {
+        // Fetch the image as a blob
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'singapore-profile.png', { type: 'image/png' });
+
+        // Try Web Share API with file (best for mobile - goes straight to gallery)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'My Singapore Profile Card',
+          });
+          btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Saved!';
+          hint.textContent = '';
+          return;
+        }
+
+        // Fallback: download via anchor tag
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'singapore-profile.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Downloaded!';
+        hint.textContent = 'Check your Downloads folder';
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          // User cancelled the share sheet
+          btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Save to Gallery';
+          btn.disabled = false;
+          hint.textContent = 'Saves directly to your photo gallery';
+          return;
+        }
+        // Long-press fallback
+        btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Save to Gallery';
+        btn.disabled = false;
+        hint.textContent = 'Long-press the image above to save';
+      }
+    }
+  </script>
+</body>
+</html>`;
+
+      return new Response(html, {
+        headers: {
+          ...securityHeaders,
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      })
+    }
+
     // Serve images from R2 (generated images, cards, and uploaded photos)
     if (url.pathname.startsWith('/generated/') || url.pathname.startsWith('/uploads/') || url.pathname.startsWith('/cards/')) {
       const key = url.pathname.slice(1) // Remove leading slash
