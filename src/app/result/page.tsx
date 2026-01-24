@@ -436,7 +436,7 @@ function ResultPageContent() {
       <div className="relative z-10 flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden max-w-6xl mx-auto w-full">
 
         {/* Left column: Image (+ header on mobile) */}
-        <div className="flex-1 min-h-0 flex flex-col md:w-[58%] md:flex-none md:pr-6">
+        <div className="flex-1 min-h-0 flex flex-col md:w-[58%] md:flex-none">
 
           {/* School logo - mobile only */}
           <div className="md:hidden flex justify-center pt-2 px-4">
@@ -548,7 +548,7 @@ function ResultPageContent() {
         </div>
 
         {/* Right column: Profile info + QR + buttons (desktop) / Bottom section (mobile) */}
-        <div className="md:w-[42%] md:flex md:flex-col md:justify-center md:items-start md:pl-8 md:pr-6 md:py-6 shrink-0 md:shrink md:min-h-0 md:border-l" style={{ borderColor: `${currentStyle.color}25` }}>
+        <div className="md:w-[42%] md:flex md:flex-col md:justify-center md:items-start md:pl-8 md:pr-6 md:py-6 shrink-0 md:shrink md:min-h-0">
 
           {/* Desktop glass card wrapper */}
           <div className="hidden md:block w-full bg-white/[0.04] backdrop-blur-md rounded-2xl p-6 border border-white/[0.08]">
