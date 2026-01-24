@@ -3,6 +3,8 @@ export interface Question {
   question: string
   icon: string
   backgroundImage: string
+  backgroundPosition?: string
+  backgroundSize?: string
   options: { label: string; text: string; emoji: string }[]
   answerKey: 'q1' | 'q2' | 'q3' | 'q4' | 'q5' | 'q6'
   section: 'past' | 'future'
@@ -29,6 +31,8 @@ export const questions: Question[] = [
     question: "When you think about Singapore's early years, what stands out most to you?",
     icon: '🏛️',
     backgroundImage: pastBackgrounds[0],
+    backgroundSize: '140%',
+    backgroundPosition: '55% center',
     options: [
       { label: 'A', text: 'How Singapore survived despite having almost no natural resources', emoji: '💪' },
       { label: 'B', text: 'How leaders made tough decisions to ensure stability and security', emoji: '🛡️' },

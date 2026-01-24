@@ -65,6 +65,8 @@ interface QuestionCardProps {
   question: string
   questionIcon?: string
   backgroundImage?: string
+  backgroundPosition?: string
+  backgroundSize?: string
   options: { label: string; text: string; emoji?: string }[]
   selectedAnswer: string | null
   onSelect: (answer: string) => void
@@ -76,6 +78,8 @@ export default function QuestionCard({
   totalQuestions,
   question,
   backgroundImage,
+  backgroundPosition,
+  backgroundSize,
   options,
   selectedAnswer,
   onSelect,
@@ -167,8 +171,12 @@ export default function QuestionCard({
     <div className="relative flex-1 flex flex-col overflow-hidden">
       {/* Background image */}
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none transition-opacity duration-500"
-        style={{ backgroundImage: `url(${backgroundImage || 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80'})` }}
+        className="absolute inset-0 opacity-30 pointer-events-none transition-opacity duration-500"
+        style={{
+          backgroundImage: `url(${backgroundImage || 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80'})`,
+          backgroundSize: backgroundSize || 'cover',
+          backgroundPosition: backgroundPosition || 'center',
+        }}
       />
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 

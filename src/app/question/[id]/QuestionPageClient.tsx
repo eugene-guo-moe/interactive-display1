@@ -64,6 +64,8 @@ export default function QuestionPageClient({ id }: { id: string }) {
       question={question.question}
       questionIcon={question.icon}
       backgroundImage={question.backgroundImage}
+      backgroundPosition={question.backgroundPosition}
+      backgroundSize={question.backgroundSize}
       options={question.options}
       selectedAnswer={selectedAnswer}
       onSelect={handleSelect}
