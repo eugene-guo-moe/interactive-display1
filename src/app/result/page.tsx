@@ -59,6 +59,8 @@ function ResultPageContent() {
   const [cardUrl, setCardUrl] = useState<string | null>(null)
   const [cardDataUrl, setCardDataUrl] = useState<string | null>(null)
   const [imageBase64, setImageBase64] = useState<string | null>(null)
+  const [iconBase64, setIconBase64] = useState<string | null>(null)
+  const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedCardGeneration = useRef(false)
 
@@ -156,7 +158,7 @@ function ResultPageContent() {
     console.log('Card generation started')
 
     try {
-      // Convert external image to base64 first to avoid CORS issues
+      // Convert all images to base64 to avoid html-to-image loading issues
       let base64Img = imageBase64
       if (!base64Img && displayImageUrl && !displayImageUrl.startsWith('data:')) {
         console.log('Converting image to base64...')
@@ -164,16 +166,27 @@ function ResultPageContent() {
           base64Img = await convertImageToBase64(displayImageUrl)
           setImageBase64(base64Img)
           console.log('Base64 conversion successful')
-          // Wait longer for React to re-render with new state
-          await new Promise(resolve => setTimeout(resolve, 1500))
         } catch (convErr) {
           console.warn('Could not convert image to base64:', convErr)
-          console.warn('Trying direct capture instead')
         }
-      } else {
-        // Still wait for any pending renders
-        await new Promise(resolve => setTimeout(resolve, 500))
       }
+
+      // Convert icon and logo to base64 for reliable card rendering
+      if (!iconBase64 && profile.icon) {
+        try {
+          const iconB64 = await convertImageToBase64(profile.icon)
+          setIconBase64(iconB64)
+        } catch (e) { console.warn('Icon base64 failed:', e) }
+      }
+      if (!logoBase64) {
+        try {
+          const logoB64 = await convertImageToBase64('/school-logo.png')
+          setLogoBase64(logoB64)
+        } catch (e) { console.warn('Logo base64 failed:', e) }
+      }
+
+      // Wait for React to re-render with base64 state
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       // Generate base card image - skip fonts to avoid CSP blocking external font fetch
       const baseCardDataUrl = await toPng(cardRef.current, {
@@ -221,7 +234,7 @@ function ResultPageContent() {
       }
       setCardStatus('error')
     }
-  }, [displayImageUrl, profileType, setQrUrl, imageBase64, convertImageToBase64, currentStyle, profile])
+  }, [displayImageUrl, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, convertImageToBase64, currentStyle, profile])
 
   // Start card generation when image is loaded
   useEffect(() => {
@@ -603,7 +616,7 @@ function ResultPageContent() {
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/school-logo.png"
+              src={logoBase64 || '/school-logo.png'}
               alt="Riverside Secondary School"
               style={{
                 height: '52px',
@@ -614,7 +627,7 @@ function ResultPageContent() {
           {/* Profile icon */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={profile.icon}
+            src={iconBase64 || profile.icon}
             alt=""
             style={{
               width: '56px',
