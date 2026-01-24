@@ -366,7 +366,7 @@ function ResultPageContent() {
   }
 
   return (
-    <div className="relative flex-1 flex flex-col page-transition overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', backgroundColor: '#050505' }}>
+    <div className="relative flex-1 flex flex-col page-transition overflow-hidden" style={{ backgroundColor: '#050505' }}>
       {/* Background - generated image, heavily blurred */}
       {displayImageUrl && (
         <div

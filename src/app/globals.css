@@ -21,16 +21,12 @@ html {
 
 body {
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: var(--sg-dark);
-  min-height: 100vh;
-  min-height: 100dvh;
   position: relative;
 }
 
