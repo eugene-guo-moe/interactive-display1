@@ -4,7 +4,6 @@
   "description": "An interactive booth experience exploring Singapore's past and future",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#ffffff",
   "icons": [
