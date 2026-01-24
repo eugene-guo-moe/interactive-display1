@@ -188,16 +188,27 @@ function ResultPageContent() {
         }
       }
 
-      // Convert all images to base64 to avoid html-to-image loading issues
+      // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
       let base64Img = imageBase64
       if (!base64Img && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
-        console.log('Converting image to base64...')
+        console.log('Fetching image as blob for base64 conversion...')
         try {
-          base64Img = await convertImageToBase64(imageUrlForCard)
-          setImageBase64(base64Img)
-          console.log('Base64 conversion successful')
+          const imgResponse = await fetch(imageUrlForCard, { mode: 'cors' })
+          if (imgResponse.ok) {
+            const blob = await imgResponse.blob()
+            base64Img = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(blob)
+            })
+            setImageBase64(base64Img)
+            console.log('Base64 conversion successful, size:', Math.round(base64Img.length / 1024), 'KB')
+          } else {
+            console.warn('Image fetch failed:', imgResponse.status)
+          }
         } catch (convErr) {
-          console.warn('Could not convert image to base64:', convErr)
+          console.warn('Could not fetch image as base64:', convErr)
         }
       }
 
