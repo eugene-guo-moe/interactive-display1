@@ -585,8 +585,6 @@ function ResultPageContent() {
 
           {/* Profile Header - desktop only */}
           <div className="hidden md:block mb-4 text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={profile.icon} alt="" className="w-14 h-14 mb-3 mx-auto block object-contain" />
             <h1
               className="font-display text-3xl font-semibold mb-2"
               style={{
@@ -599,6 +597,12 @@ function ResultPageContent() {
             <p className="text-white/70 text-base italic">
               &ldquo;{profile.tagline}&rdquo;
             </p>
+          </div>
+
+          {/* Profile icon - desktop only (visual separator between quote and description) */}
+          <div className="hidden md:flex md:justify-center mb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={profile.icon} alt="" className="w-12 h-12 object-contain" />
           </div>
 
           {/* Profile Description - desktop only */}
