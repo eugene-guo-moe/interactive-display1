@@ -52,7 +52,7 @@ const testProfiles: Record<string, ProfileType> = {
 function ResultPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { resultImageUrl, qrUrl, setQrUrl, r2Path, getProfile, getProfileType, resetQuiz, photoData } = useQuiz()
+  const { resultImageUrl, qrUrl, setQrUrl, r2Path, getProfile, getProfileType, resetQuiz, photoData, hydrated } = useQuiz()
   const [showContent, setShowContent] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [cardStatus, setCardStatus] = useState<CardStatus>('generating')
@@ -99,6 +99,9 @@ function ResultPageContent() {
       return () => clearTimeout(timer)
     }
 
+    // Wait for sessionStorage restoration before deciding to redirect
+    if (!hydrated) return
+
     // If no result image and no photo, redirect to start
     if (!resultImageUrl && !photoData) {
       router.push('/')
@@ -108,7 +111,7 @@ function ResultPageContent() {
     // Show content after a delay
     const timer = setTimeout(() => setShowContent(true), 500)
     return () => clearTimeout(timer)
-  }, [resultImageUrl, photoData, router, isTestMode])
+  }, [resultImageUrl, photoData, router, isTestMode, hydrated])
 
   // Convert image URL to base64 to avoid CORS issues with html-to-image
   const convertImageToBase64 = useCallback(async (url: string): Promise<string> => {
@@ -675,9 +678,9 @@ function ResultPageContent() {
                   ) : (
                     <>
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                      Get Card
+                      Save Photo
                     </>
                   )}
                 </button>
