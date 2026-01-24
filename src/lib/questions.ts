@@ -31,7 +31,7 @@ export const questions: Question[] = [
     question: "When you think about Singapore's early years, what stands out most to you?",
     icon: '🏛️',
     backgroundImage: pastBackgrounds[0],
-    backgroundSize: '140%',
+    backgroundSize: '115%',
     backgroundPosition: '55% center',
     options: [
       { label: 'A', text: 'How Singapore survived despite having almost no natural resources', emoji: '💪' },
