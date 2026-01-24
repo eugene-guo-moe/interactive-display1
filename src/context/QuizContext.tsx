@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 import type { QuizAnswers, ProfileType, Profile } from '@/types/quiz'
 import { profiles } from '@/types/quiz'
 
@@ -25,6 +25,7 @@ interface QuizContextType {
   getProfileType: () => ProfileType
   generationMethod: GenerationMethod
   setGenerationMethod: (method: GenerationMethod) => void
+  hydrated: boolean
 }
 
 const initialAnswers: QuizAnswers = {
@@ -138,6 +139,21 @@ function calculateProfile(answers: QuizAnswers): ProfileType {
   return 'builder'
 }
 
+const STORAGE_KEY = 'quiz-state'
+
+function loadFromSession(): { answers?: QuizAnswers; resultImageUrl?: string; qrUrl?: string; r2Path?: string } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY)
+    return stored ? JSON.parse(stored) : null
+  } catch { return null }
+}
+
+function saveToSession(data: { answers: QuizAnswers; resultImageUrl: string | null; qrUrl: string | null; r2Path: string | null }) {
+  if (typeof window === 'undefined') return
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
+}
+
 export function QuizProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers)
   const [photoData, setPhotoData] = useState<string | null>(null)
@@ -145,6 +161,25 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [r2Path, setR2Path] = useState<string | null>(null)
   const [generationMethod, setGenerationMethod] = useState<GenerationMethod>('v1')
+  const [hydrated, setHydrated] = useState(false)
+
+  // Restore state from sessionStorage on mount
+  useEffect(() => {
+    const saved = loadFromSession()
+    if (saved) {
+      if (saved.answers) setAnswers(saved.answers)
+      if (saved.resultImageUrl) setResultImageUrl(saved.resultImageUrl)
+      if (saved.qrUrl) setQrUrl(saved.qrUrl)
+      if (saved.r2Path) setR2Path(saved.r2Path)
+    }
+    setHydrated(true)
+  }, [])
+
+  // Persist key state to sessionStorage after hydration
+  useEffect(() => {
+    if (!hydrated) return
+    saveToSession({ answers, resultImageUrl, qrUrl, r2Path })
+  }, [answers, resultImageUrl, qrUrl, r2Path, hydrated])
 
   const setAnswer = useCallback((question: keyof QuizAnswers, answer: string) => {
     setAnswers(prev => ({ ...prev, [question]: answer }))
@@ -156,6 +191,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setResultImageUrl(null)
     setQrUrl(null)
     setR2Path(null)
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.removeItem(STORAGE_KEY) } catch {}
+    }
   }, [])
 
   const getProfileType = useCallback((): ProfileType => {
@@ -185,6 +223,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         getProfileType,
         generationMethod,
         setGenerationMethod,
+        hydrated,
       }}
     >
       {children}
