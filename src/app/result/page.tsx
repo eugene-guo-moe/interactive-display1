@@ -269,7 +269,7 @@ function ResultPageContent() {
   const renderQRSection = () => {
     if (cardStatus === 'generating' || cardStatus === 'uploading') {
       return (
-        <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+        <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
           <div
             className="flex-shrink-0 p-2.5 rounded-xl"
             style={{
@@ -303,7 +303,7 @@ function ResultPageContent() {
 
     if (cardStatus === 'error') {
       return (
-        <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+        <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
           <div
             className="flex-shrink-0 p-2.5 rounded-xl"
             style={{
@@ -333,7 +333,7 @@ function ResultPageContent() {
 
     // Card is ready
     return (
-      <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+      <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
         <div
           className="flex-shrink-0 p-2.5 rounded-xl"
           style={{
@@ -406,16 +406,16 @@ function ResultPageContent() {
       />
 
       {/* School indicator */}
-      <p className="relative z-10 text-white/40 text-xs sm:text-sm tracking-widest text-center pt-3 sm:pt-4 px-4">
+      <p className="relative z-10 text-white/40 text-xs sm:text-sm tracking-widest text-center pt-2 px-4">
         RIVERSIDE SECONDARY SCHOOL, SINGAPORE
       </p>
 
       {/* Profile Header */}
-      <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-2 text-center shrink-0">
+      <div className="relative z-10 px-4 md:px-5 pt-2 pb-1 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={profile.icon} alt="" className="w-12 h-12 sm:w-14 sm:h-14 mb-2 mx-auto block object-contain" />
+        <img src={profile.icon} alt="" className="w-10 h-10 sm:w-12 sm:h-12 mb-1 mx-auto block object-contain" />
         <h1
-          className="font-display text-2xl md:text-3xl font-semibold mb-2"
+          className="font-display text-xl sm:text-2xl md:text-3xl font-semibold mb-1"
           style={{
             color: currentStyle.color,
             textShadow: `0 0 40px ${currentStyle.color}40`
@@ -423,14 +423,14 @@ function ResultPageContent() {
         >
           {profile.title}
         </h1>
-        <p className="text-white/70 text-sm md:text-base max-w-md mx-auto italic">
+        <p className="text-white/70 text-xs sm:text-sm md:text-base max-w-md mx-auto italic">
           &ldquo;{profile.tagline}&rdquo;
         </p>
       </div>
 
       {/* Generated image */}
-      <div className="relative z-10 flex items-center justify-center px-3 pt-2 sm:pt-0 shrink-0">
-        <div className="relative w-[85vw] max-w-sm md:max-w-md">
+      <div className="relative z-10 flex items-center justify-center px-3 py-1 flex-1 min-h-0">
+        <div className="relative w-[85vw] max-w-sm md:max-w-md h-full max-h-full">
           {/* Decorative frame corners */}
           <div
             className="absolute -top-2 -left-2 w-8 h-8 border-l-2 border-t-2 rounded-tl-lg"
@@ -451,7 +451,7 @@ function ResultPageContent() {
 
           {/* Image container */}
           <div
-            className="relative rounded-xl overflow-hidden shadow-2xl"
+            className="relative rounded-xl overflow-hidden shadow-2xl h-full"
             style={{
               boxShadow: `0 25px 50px -12px ${currentStyle.color}40`,
               outline: `1px solid ${currentStyle.color}30`
@@ -463,7 +463,7 @@ function ResultPageContent() {
                 <img
                   src={displayImageUrl}
                   alt="Your Singapore moment"
-                  className={`w-full h-auto max-h-[35vh] sm:max-h-[40vh] object-contain transition-opacity duration-500 ${
+                  className={`w-full h-full object-contain transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   onLoad={() => setImageLoaded(true)}
@@ -502,11 +502,11 @@ function ResultPageContent() {
 
       {/* Profile Description */}
       {showContent && (
-        <div className="relative z-10 px-4 pt-4 text-center max-w-md mx-auto">
-          <p className="text-white/60 text-sm leading-relaxed mb-2">
+        <div className="relative z-10 px-4 pt-2 text-center max-w-md mx-auto">
+          <p className="text-white/60 text-xs sm:text-sm leading-relaxed mb-1">
             {profile.description}
           </p>
-          <p className="text-sm font-medium" style={{ color: currentStyle.color }}>
+          <p className="text-xs sm:text-sm font-medium" style={{ color: currentStyle.color }}>
             Your strength: {profile.strength}
           </p>
         </div>
@@ -515,9 +515,9 @@ function ResultPageContent() {
       {/* Bottom section */}
       {showContent && (
         <div
-          className="relative z-10 pt-4 px-4 md:px-5 pb-6 rounded-t-3xl slide-up shrink-0 mt-auto backdrop-blur-sm"
+          className="relative z-10 pt-3 px-4 md:px-5 pb-4 rounded-t-3xl slide-up shrink-0 mt-auto backdrop-blur-sm"
           style={{
-            paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
             backgroundColor: 'rgba(0,0,0,0.4)',
             borderTop: `1px solid ${currentStyle.color}15`
           }}
@@ -558,7 +558,7 @@ function ResultPageContent() {
           </div>
 
           {/* Footer text */}
-          <p className="text-center text-white/30 text-xs mt-4 tracking-wide">
+          <p className="text-center text-white/30 text-xs mt-2 tracking-wide">
             Powered by AI • Made with love in Singapore
           </p>
         </div>
@@ -567,7 +567,7 @@ function ResultPageContent() {
       {/* Loading placeholder */}
       {!showContent && (
         <div className="relative z-10 p-4 md:p-5 glass-card rounded-t-3xl shrink-0 mt-auto">
-          <div className="flex items-center gap-5 mb-5 max-w-md mx-auto">
+          <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
             <div className="w-[104px] h-[104px] bg-white/10 rounded-xl shimmer" />
             <div className="flex-1">
               <div className="w-32 h-5 bg-white/10 rounded mb-2 shimmer" />
