@@ -165,38 +165,28 @@ export default function LoadingPage() {
       }
     }
 
-    // Start initial generation
+    // Start initial generation, retry once on failure
     generateImage().catch((err) => {
       if (!isComplete.current && retryCount.current === 0) {
-        // Will be handled by auto-retry at 80s
-        console.log('Initial generation failed, waiting for auto-retry')
+        console.log('Initial generation failed, retrying immediately...')
+        retryCount.current = 1
+        generateImage().catch(() => {
+          // Both attempts failed - show error immediately
+          if (!isComplete.current) {
+            isComplete.current = true
+            setError('Image generation failed. Please try again.')
+          }
+        })
       } else {
         isComplete.current = true
         setError('Something went wrong. Please try again.')
       }
     })
 
-    // Auto-retry at 80 seconds if not complete
-    const retryTimeoutId = setTimeout(() => {
-      if (!isComplete.current && retryCount.current === 0) {
-        console.log('Auto-retrying at 80 seconds...')
-        retryCount.current = 1
-        // Abort the ongoing fetch request
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort()
-        }
-        // Start a new generation attempt
-        generateImage().catch(() => {
-          // Retry also failed, will be caught by final timeout
-        })
-      }
-    }, 80000)
-
-    // Final timeout at 90 seconds - show timeout UI
+    // Final timeout at 90 seconds - show timeout UI if still running
     const finalTimeoutId = setTimeout(() => {
       if (!isComplete.current) {
         setTimedOut(true)
-        // Abort any ongoing fetch request
         if (abortControllerRef.current) {
           abortControllerRef.current.abort()
         }
@@ -204,7 +194,6 @@ export default function LoadingPage() {
     }, 90000)
 
     return () => {
-      clearTimeout(retryTimeoutId)
       clearTimeout(finalTimeoutId)
     }
   }, [photoData, answers, router, setResultImageUrl, setQrUrl, setR2Path, generationMethod])
