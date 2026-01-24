@@ -226,7 +226,16 @@ function ResultPageContent() {
         } catch (e) { console.warn('Logo base64 failed:', e) }
       }
 
-      // Wait for React to re-render with base64 state
+      // Directly set img src on the DOM to avoid React state race condition
+      if (base64Img && cardRef.current) {
+        const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
+        if (imgEl) {
+          imgEl.src = base64Img
+          console.log('Set card img src directly on DOM')
+        }
+      }
+
+      // Wait for image to decode and React to settle
       await new Promise(resolve => setTimeout(resolve, 1500))
 
       // Generate base card image - skip fonts to avoid CSP blocking external font fetch
