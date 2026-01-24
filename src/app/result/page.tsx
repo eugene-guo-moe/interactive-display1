@@ -62,8 +62,15 @@ function ResultPageContent() {
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedCardGeneration = useRef(false)
+
+  // Debug logger that shows on screen
+  const dbg = useCallback((msg: string) => {
+    console.log('[CARD]', msg)
+    setDebugLogs(prev => [...prev.slice(-15), `${new Date().toLocaleTimeString()}: ${msg}`])
+  }, [])
 
   // Test mode: allow passing image URL and profile via query params
   // Usage: /result?testImage=https://...&testProfile=builder
@@ -164,15 +171,18 @@ function ResultPageContent() {
     hasStartedCardGeneration.current = true
 
     setCardStatus('generating')
-    console.log('Card generation started')
+    dbg('Card generation started')
+    dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
+    dbg(`r2Path: ${r2Path}`)
+    dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
 
     try {
       // Upload FAL.ai image to R2 first so we can use same-origin URL for canvas
       let imageUrlForCard = displayImageUrl
       if (resultImageUrl && r2Path && (resultImageUrl.includes('fal.media') || resultImageUrl.includes('fal.ai'))) {
-        console.log('Uploading FAL.ai image to R2 for CORS-safe card generation...')
+        dbg('Uploading FAL.ai image to R2...')
         try {
-          const timePeriod = r2Path.split('/')[1] || 'present' // e.g. "generated/past/123.jpg" → "past"
+          const timePeriod = r2Path.split('/')[1] || 'present'
           const uploadRes = await fetch(`${WORKER_URL}/upload-to-r2`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -181,28 +191,33 @@ function ResultPageContent() {
           if (uploadRes.ok) {
             const data = await uploadRes.json()
             imageUrlForCard = data.r2Url
-            console.log('R2 upload done, using:', imageUrlForCard)
+            dbg(`R2 upload OK: ${imageUrlForCard.substring(0, 60)}`)
+          } else {
+            dbg(`R2 upload failed: ${uploadRes.status} ${uploadRes.statusText}`)
           }
         } catch (e) {
-          console.warn('R2 upload failed, falling back to FAL URL:', e)
+          dbg(`R2 upload error: ${e}`)
         }
+      } else {
+        dbg(`Skipped R2 upload: resultImageUrl=${!!resultImageUrl}, r2Path=${!!r2Path}`)
       }
 
       // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
       let base64Img = imageBase64
       if (!base64Img && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
-        // Try fetching the image URL (R2 or FAL.ai) as blob
         const urlsToTry = [imageUrlForCard]
-        // Add FAL.ai URL as fallback if we're using R2 URL
         if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
           urlsToTry.push(displayImageUrl)
         }
+        dbg(`Will try ${urlsToTry.length} URL(s) for base64`)
         for (const url of urlsToTry) {
-          console.log('Fetching image as blob:', url.substring(0, 60) + '...')
+          dbg(`Fetching: ${url.substring(0, 60)}...`)
           try {
             const imgResponse = await fetch(url, { mode: 'cors' })
+            dbg(`Response: ${imgResponse.status} ${imgResponse.statusText}, type=${imgResponse.type}`)
             if (imgResponse.ok) {
               const blob = await imgResponse.blob()
+              dbg(`Blob: ${blob.size} bytes, type=${blob.type}`)
               base64Img = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader()
                 reader.onloadend = () => resolve(reader.result as string)
@@ -210,15 +225,20 @@ function ResultPageContent() {
                 reader.readAsDataURL(blob)
               })
               setImageBase64(base64Img)
-              console.log('Base64 conversion successful, size:', Math.round(base64Img.length / 1024), 'KB')
-              break // Success, stop trying
+              dbg(`Base64 OK: ${Math.round(base64Img.length / 1024)} KB`)
+              break
             } else {
-              console.warn('Image fetch failed:', imgResponse.status, url.substring(0, 60))
+              dbg(`Fetch failed: ${imgResponse.status}`)
             }
           } catch (convErr) {
-            console.warn('Fetch failed for:', url.substring(0, 60), convErr)
+            dbg(`Fetch error: ${convErr}`)
           }
         }
+        if (!base64Img) {
+          dbg('WARNING: All fetch attempts failed, card will have no photo')
+        }
+      } else {
+        dbg(`Skip fetch: base64=${!!base64Img}, url=${!!imageUrlForCard}`)
       }
 
       // Convert icon and logo to base64 for reliable card rendering
@@ -226,13 +246,13 @@ function ResultPageContent() {
         try {
           const iconB64 = await convertImageToBase64(profile.icon)
           setIconBase64(iconB64)
-        } catch (e) { console.warn('Icon base64 failed:', e) }
+        } catch (e) { dbg(`Icon base64 failed: ${e}`) }
       }
       if (!logoBase64) {
         try {
           const logoB64 = await convertImageToBase64('/school-logo.png')
           setLogoBase64(logoB64)
-        } catch (e) { console.warn('Logo base64 failed:', e) }
+        } catch (e) { dbg(`Logo base64 failed: ${e}`) }
       }
 
       // Directly set img src on the DOM to avoid React state race condition
@@ -240,12 +260,17 @@ function ResultPageContent() {
         const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
         if (imgEl) {
           imgEl.src = base64Img
-          console.log('Set card img src directly on DOM')
+          dbg('Set img src directly on DOM element')
+        } else {
+          dbg('WARNING: img element not found in card div')
         }
+      } else {
+        dbg(`Skip DOM set: base64=${!!base64Img}, cardRef=${!!cardRef.current}`)
       }
 
       // Wait for image to decode and React to settle
       await new Promise(resolve => setTimeout(resolve, 1500))
+      dbg('Starting toPng capture...')
 
       // Generate base card image - skip fonts to avoid CSP blocking external font fetch
       const baseCardDataUrl = await toPng(cardRef.current, {
@@ -293,7 +318,7 @@ function ResultPageContent() {
       }
       setCardStatus('error')
     }
-  }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, convertImageToBase64, currentStyle, profile])
+  }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, convertImageToBase64, currentStyle, profile, dbg])
 
   // Start card generation when image is loaded
   useEffect(() => {
@@ -764,6 +789,30 @@ function ResultPageContent() {
           )}
         </div>
       </div>
+
+      {/* Debug overlay - TEMPORARY */}
+      {debugLogs.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxHeight: '40vh',
+          overflow: 'auto',
+          background: 'rgba(0,0,0,0.9)',
+          color: '#0f0',
+          fontSize: '10px',
+          fontFamily: 'monospace',
+          padding: '8px',
+          zIndex: 99999,
+          lineHeight: 1.4,
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#ff0' }}>Card Debug Log:</div>
+          {debugLogs.map((log, i) => (
+            <div key={i} style={{ color: log.includes('WARNING') || log.includes('error') || log.includes('failed') ? '#f55' : '#0f0' }}>{log}</div>
+          ))}
+        </div>
+      )}
 
       {/* Hidden card for generation - positioned behind main content */}
       <div
