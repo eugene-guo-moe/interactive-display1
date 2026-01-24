@@ -470,8 +470,6 @@ function ResultPageContent() {
 
           {/* Profile Header - mobile only */}
           <div className="md:hidden px-4 pt-2 pb-1 text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={profile.icon} alt="" className="w-10 h-10 sm:w-12 sm:h-12 mb-1 mx-auto block object-contain" />
             <h1
               className="font-display text-xl sm:text-2xl font-semibold mb-1"
               style={{
@@ -484,6 +482,8 @@ function ResultPageContent() {
             <p className="text-white/70 text-xs sm:text-sm max-w-md mx-auto italic">
               &ldquo;{profile.tagline}&rdquo;
             </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={profile.icon} alt="" className="w-10 h-10 sm:w-12 sm:h-12 mt-2 mx-auto block object-contain" />
           </div>
 
           {/* Generated image */}
