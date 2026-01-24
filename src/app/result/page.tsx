@@ -61,6 +61,7 @@ function ResultPageContent() {
   const [imageBase64, setImageBase64] = useState<string | null>(null)
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
+  const [canShare, setCanShare] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedCardGeneration = useRef(false)
 
@@ -85,6 +86,11 @@ function ResultPageContent() {
   const qrValue = cardUrl
     ? cardUrl.replace('/cards/', '/view/cards/')
     : 'https://riversidesec.pages.dev'
+
+  // Detect Web Share API support (mobile save-to-gallery)
+  useEffect(() => {
+    setCanShare(typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare)
+  }, [])
 
   useEffect(() => {
     // Skip redirect in test mode
@@ -248,10 +254,30 @@ function ResultPageContent() {
     resetQuiz()
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    const fileName = `riverside-${profileType}-${Date.now()}.png`
+
+    // Try Web Share API first (mobile - opens native share sheet with "Save Image")
+    if (navigator.share && cardDataUrl) {
+      try {
+        const response = await fetch(cardDataUrl)
+        const blob = await response.blob()
+        const file = new File([blob], fileName, { type: 'image/png' })
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] })
+          return
+        }
+      } catch (err) {
+        // User cancelled share or share failed - fall through to download
+        if (err instanceof Error && err.name === 'AbortError') return
+      }
+    }
+
+    // Fallback: direct download
     if (cardDataUrl) {
       const link = document.createElement('a')
-      link.download = `riverside-${profileType}-${Date.now()}.png`
+      link.download = fileName
       link.href = cardDataUrl
       link.click()
     } else if (cardUrl) {
@@ -592,7 +618,7 @@ function ResultPageContent() {
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                      Download
+                      {canShare ? 'Save' : 'Download'}
                     </>
                   )}
                 </button>
