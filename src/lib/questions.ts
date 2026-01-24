@@ -12,7 +12,7 @@ export interface Question {
 const pastBackgrounds = [
   'https://images.unsplash.com/photo-1589848014453-f5371e76d4ed?w=1920&q=80', // Chinatown shophouse corner
   'https://images.unsplash.com/photo-1750608454572-8bcf7c580986?w=1920&q=80', // Buddha Tooth Relic Temple
-  'https://images.unsplash.com/photo-1746964246112-ce2a1560b900?w=1920&q=80', // Temple at night (warm)
+  'https://images.unsplash.com/photo-1634024309115-2966435f0815?w=1920&q=80', // Bumboat at Pulau Ubin
 ]
 
 // Modern/futuristic backgrounds for Future questions (Q4-6)
