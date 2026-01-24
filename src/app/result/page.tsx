@@ -269,7 +269,7 @@ function ResultPageContent() {
   const renderQRSection = () => {
     if (cardStatus === 'generating' || cardStatus === 'uploading') {
       return (
-        <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
+        <div className="flex items-center gap-4 mb-3 max-w-md mx-auto w-full">
           <div
             className="flex-shrink-0 p-2.5 rounded-xl"
             style={{
@@ -303,7 +303,7 @@ function ResultPageContent() {
 
     if (cardStatus === 'error') {
       return (
-        <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
+        <div className="flex items-center gap-4 mb-3 max-w-md mx-auto w-full">
           <div
             className="flex-shrink-0 p-2.5 rounded-xl"
             style={{
@@ -333,7 +333,7 @@ function ResultPageContent() {
 
     // Card is ready
     return (
-      <div className="flex items-center gap-4 mb-3 max-w-md mx-auto">
+      <div className="flex items-center gap-4 mb-3 max-w-md mx-auto w-full">
         <div
           className="flex-shrink-0 p-2.5 rounded-xl"
           style={{
@@ -411,10 +411,11 @@ function ResultPageContent() {
         {/* Left column: Image (+ header on mobile) */}
         <div className="flex-1 min-h-0 flex flex-col md:w-1/2 md:flex-none">
 
-          {/* School indicator - mobile only */}
-          <p className="md:hidden text-white/40 text-xs sm:text-sm tracking-widest text-center pt-2 px-4">
-            RIVERSIDE SECONDARY SCHOOL, SINGAPORE
-          </p>
+          {/* School logo - mobile only */}
+          <div className="md:hidden flex justify-center pt-2 px-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/school-logo.png" alt="Riverside Secondary School" className="h-8 sm:h-9 object-contain" />
+          </div>
 
           {/* Profile Header - mobile only */}
           <div className="md:hidden px-4 pt-2 pb-1 text-center">
@@ -520,17 +521,18 @@ function ResultPageContent() {
         </div>
 
         {/* Right column: Profile info + QR + buttons (desktop) / Bottom section (mobile) */}
-        <div className="md:w-1/2 md:flex md:flex-col md:justify-center md:px-8 md:py-6 shrink-0 md:shrink md:min-h-0">
+        <div className="md:w-1/2 md:flex md:flex-col md:justify-center md:items-center md:px-8 md:py-6 shrink-0 md:shrink md:min-h-0">
 
-          {/* School indicator - desktop only */}
-          <p className="hidden md:block text-white/40 text-sm tracking-widest mb-3">
-            RIVERSIDE SECONDARY SCHOOL, SINGAPORE
-          </p>
+          {/* School logo - desktop only */}
+          <div className="hidden md:block mb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/school-logo.png" alt="Riverside Secondary School" className="h-10 object-contain" />
+          </div>
 
           {/* Profile Header - desktop only */}
-          <div className="hidden md:block mb-3">
+          <div className="hidden md:block mb-3 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={profile.icon} alt="" className="w-14 h-14 mb-2 block object-contain" />
+            <img src={profile.icon} alt="" className="w-14 h-14 mb-2 mx-auto block object-contain" />
             <h1
               className="font-display text-3xl font-semibold mb-2"
               style={{
@@ -547,7 +549,7 @@ function ResultPageContent() {
 
           {/* Profile Description - desktop only */}
           {showContent && (
-            <div className="hidden md:block mb-4">
+            <div className="hidden md:block mb-4 text-center max-w-md">
               <p className="text-white/60 text-sm leading-relaxed mb-2">
                 {profile.description}
               </p>
@@ -565,7 +567,7 @@ function ResultPageContent() {
               {renderQRSection()}
 
               {/* Action buttons */}
-              <div className="flex gap-3 max-w-md mx-auto md:mx-0">
+              <div className="flex gap-3 max-w-md mx-auto w-full">
                 <button
                   onClick={handleStartOver}
                   className="btn-press flex-1 py-3.5 rounded-full bg-white/10 border border-white/20 text-white/70 font-medium hover:bg-white/15 hover:text-white transition-all flex items-center justify-center gap-2"
@@ -597,7 +599,7 @@ function ResultPageContent() {
               </div>
 
               {/* Footer text */}
-              <p className="text-center md:text-left text-white/30 text-xs mt-2 tracking-wide">
+              <p className="text-center text-white/30 text-xs mt-2 tracking-wide">
                 Powered by AI • Made with love in Singapore
               </p>
             </div>
@@ -606,7 +608,7 @@ function ResultPageContent() {
           {/* Loading placeholder */}
           {!showContent && (
             <div className="p-4 md:p-0 glass-card md:bg-transparent rounded-t-3xl md:rounded-none shrink-0 mt-auto md:mt-0">
-              <div className="flex items-center gap-4 mb-3 max-w-md mx-auto md:mx-0">
+              <div className="flex items-center gap-4 mb-3 max-w-md mx-auto w-full md:mx-0">
                 <div className="w-[96px] h-[96px] bg-white/10 rounded-xl shimmer" />
                 <div className="flex-1">
                   <div className="w-32 h-5 bg-white/10 rounded mb-2 shimmer" />
