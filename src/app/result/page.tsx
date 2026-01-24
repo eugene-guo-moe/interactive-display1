@@ -62,15 +62,10 @@ function ResultPageContent() {
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
-  const [debugLogs, setDebugLogs] = useState<string[]>([])
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedCardGeneration = useRef(false)
 
-  // Debug logger that shows on screen
-  const dbg = useCallback((msg: string) => {
-    console.log('[CARD]', msg)
-    setDebugLogs(prev => [...prev.slice(-15), `${new Date().toLocaleTimeString()}: ${msg}`])
-  }, [])
+  const dbg = useCallback((msg: string) => { console.log('[CARD]', msg) }, [])
 
   // Test mode: allow passing image URL and profile via query params
   // Usage: /result?testImage=https://...&testProfile=builder
@@ -789,30 +784,6 @@ function ResultPageContent() {
           )}
         </div>
       </div>
-
-      {/* Debug overlay - TEMPORARY */}
-      {debugLogs.length > 0 && (
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          maxHeight: '40vh',
-          overflow: 'auto',
-          background: 'rgba(0,0,0,0.9)',
-          color: '#0f0',
-          fontSize: '10px',
-          fontFamily: 'monospace',
-          padding: '8px',
-          zIndex: 99999,
-          lineHeight: 1.4,
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#ff0' }}>Card Debug Log:</div>
-          {debugLogs.map((log, i) => (
-            <div key={i} style={{ color: log.includes('WARNING') || log.includes('error') || log.includes('failed') ? '#f55' : '#0f0' }}>{log}</div>
-          ))}
-        </div>
-      )}
 
       {/* Hidden card for generation - positioned behind main content */}
       <div
