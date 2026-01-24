@@ -778,25 +778,6 @@ function ResultPageContent() {
             />
           </div>
 
-          {/* Profile icon */}
-          <div style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '8px',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={iconBase64 || profile.icon}
-              alt=""
-              style={{
-                width: '56px',
-                height: '56px',
-                objectFit: 'contain',
-              }}
-            />
-          </div>
-
           {/* Profile title */}
           <h2 style={{
             fontSize: '32px',
@@ -815,11 +796,30 @@ function ResultPageContent() {
             color: 'rgba(255,255,255,0.7)',
             fontStyle: 'italic',
             textAlign: 'center',
-            marginBottom: '16px',
+            marginBottom: '12px',
             padding: '0 20px',
           }}>
             &ldquo;{profile.tagline}&rdquo;
           </p>
+
+          {/* Profile icon */}
+          <div style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '14px',
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={iconBase64 || profile.icon}
+              alt=""
+              style={{
+                width: '48px',
+                height: '48px',
+                objectFit: 'contain',
+              }}
+            />
+          </div>
 
           {/* Image with decorative corner brackets */}
           <div style={{
