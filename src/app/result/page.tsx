@@ -191,24 +191,33 @@ function ResultPageContent() {
       // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
       let base64Img = imageBase64
       if (!base64Img && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
-        console.log('Fetching image as blob for base64 conversion...')
-        try {
-          const imgResponse = await fetch(imageUrlForCard, { mode: 'cors' })
-          if (imgResponse.ok) {
-            const blob = await imgResponse.blob()
-            base64Img = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader()
-              reader.onloadend = () => resolve(reader.result as string)
-              reader.onerror = reject
-              reader.readAsDataURL(blob)
-            })
-            setImageBase64(base64Img)
-            console.log('Base64 conversion successful, size:', Math.round(base64Img.length / 1024), 'KB')
-          } else {
-            console.warn('Image fetch failed:', imgResponse.status)
+        // Try fetching the image URL (R2 or FAL.ai) as blob
+        const urlsToTry = [imageUrlForCard]
+        // Add FAL.ai URL as fallback if we're using R2 URL
+        if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
+          urlsToTry.push(displayImageUrl)
+        }
+        for (const url of urlsToTry) {
+          console.log('Fetching image as blob:', url.substring(0, 60) + '...')
+          try {
+            const imgResponse = await fetch(url, { mode: 'cors' })
+            if (imgResponse.ok) {
+              const blob = await imgResponse.blob()
+              base64Img = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.onerror = reject
+                reader.readAsDataURL(blob)
+              })
+              setImageBase64(base64Img)
+              console.log('Base64 conversion successful, size:', Math.round(base64Img.length / 1024), 'KB')
+              break // Success, stop trying
+            } else {
+              console.warn('Image fetch failed:', imgResponse.status, url.substring(0, 60))
+            }
+          } catch (convErr) {
+            console.warn('Fetch failed for:', url.substring(0, 60), convErr)
           }
-        } catch (convErr) {
-          console.warn('Could not fetch image as base64:', convErr)
         }
       }
 
