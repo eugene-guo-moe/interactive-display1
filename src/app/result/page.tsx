@@ -167,12 +167,33 @@ function ResultPageContent() {
     console.log('Card generation started')
 
     try {
+      // Upload FAL.ai image to R2 first so we can use same-origin URL for canvas
+      let imageUrlForCard = displayImageUrl
+      if (resultImageUrl && r2Path && (resultImageUrl.includes('fal.media') || resultImageUrl.includes('fal.ai'))) {
+        console.log('Uploading FAL.ai image to R2 for CORS-safe card generation...')
+        try {
+          const timePeriod = r2Path.split('/')[1] || 'present' // e.g. "generated/past/123.jpg" → "past"
+          const uploadRes = await fetch(`${WORKER_URL}/upload-to-r2`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ falUrl: resultImageUrl, r2Path, timePeriod }),
+          })
+          if (uploadRes.ok) {
+            const data = await uploadRes.json()
+            imageUrlForCard = data.r2Url
+            console.log('R2 upload done, using:', imageUrlForCard)
+          }
+        } catch (e) {
+          console.warn('R2 upload failed, falling back to FAL URL:', e)
+        }
+      }
+
       // Convert all images to base64 to avoid html-to-image loading issues
       let base64Img = imageBase64
-      if (!base64Img && displayImageUrl && !displayImageUrl.startsWith('data:')) {
+      if (!base64Img && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
         console.log('Converting image to base64...')
         try {
-          base64Img = await convertImageToBase64(displayImageUrl)
+          base64Img = await convertImageToBase64(imageUrlForCard)
           setImageBase64(base64Img)
           console.log('Base64 conversion successful')
         } catch (convErr) {
@@ -243,7 +264,7 @@ function ResultPageContent() {
       }
       setCardStatus('error')
     }
-  }, [displayImageUrl, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, convertImageToBase64, currentStyle, profile])
+  }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, convertImageToBase64, currentStyle, profile])
 
   // Start card generation when image is loaded
   useEffect(() => {
