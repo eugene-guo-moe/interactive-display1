@@ -620,6 +620,7 @@ function ResultPageContent() {
               alt="Riverside Secondary School"
               style={{
                 height: '52px',
+                filter: 'invert(1) hue-rotate(180deg)',
               }}
             />
           </div>
