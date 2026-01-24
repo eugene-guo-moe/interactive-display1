@@ -12,7 +12,7 @@ const loadingSteps = [
   { text: 'Final touches', description: 'Polishing the details' },
 ]
 
-const stepDurations = [12000, 36000, 30000, 12000] // Total: 90 seconds
+const stepDurations = [4000, 12000, 10000, 4000] // Total: 30 seconds
 
 // Background images based on profile type
 const backgroundImages: Record<string, string> = {
@@ -86,8 +86,8 @@ export default function LoadingPage() {
     if (hasStarted.current) return
     hasStarted.current = true
 
-    // Start slow progress animation (runs for 85 seconds to ~90%)
-    const totalDuration = 85000
+    // Start progress animation (runs for 30 seconds to ~90%)
+    const totalDuration = 30000
     const maxProgress = 90
     const startTime = Date.now()
 
