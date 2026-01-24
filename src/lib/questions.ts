@@ -8,18 +8,18 @@ export interface Question {
   section: 'past' | 'future'
 }
 
-// Vintage/sepia backgrounds for Past questions (Q1-3)
+// Heritage backgrounds for Past questions (Q1-3)
 const pastBackgrounds = [
-  'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80', // Old Singapore shophouses
-  'https://images.unsplash.com/photo-1694270290097-af940b76313e?w=1920&q=80', // Heritage building
-  'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1920&q=80', // Historical Singapore
+  'https://images.unsplash.com/photo-1589848014453-f5371e76d4ed?w=1920&q=80', // Chinatown shophouse corner
+  'https://images.unsplash.com/photo-1750608454572-8bcf7c580986?w=1920&q=80', // Buddha Tooth Relic Temple
+  'https://images.unsplash.com/photo-1746964246112-ce2a1560b900?w=1920&q=80', // Temple at night (warm)
 ]
 
-// Modern/bright backgrounds for Future questions (Q4-6)
+// Modern/futuristic backgrounds for Future questions (Q4-6)
 const futureBackgrounds = [
-  'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80', // Modern Singapore skyline
-  'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=1920&q=80', // Marina Bay Sands
-  'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80', // Futuristic cityscape
+  'https://images.unsplash.com/photo-1698513924628-4f6e0e4c00f6?w=1920&q=80', // Supertrees at night
+  'https://images.unsplash.com/photo-1702893165989-8ec6c7ddfba7?w=1920&q=80', // Aerial skyline at dusk
+  'https://images.unsplash.com/photo-1747583286685-ee48d3e599f9?w=1920&q=80', // Marina Bay Sands at night
 ]
 
 export const questions: Question[] = [
