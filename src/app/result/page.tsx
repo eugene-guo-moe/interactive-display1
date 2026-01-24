@@ -399,7 +399,8 @@ function ResultPageContent() {
 
       {/* Profile Header */}
       <div className="relative z-10 px-4 md:px-5 pt-4 sm:pt-2 pb-2 text-center shrink-0">
-        <div className="text-3xl sm:text-4xl mb-2">{profile.emoji}</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={profile.icon} alt="" className="w-12 h-12 sm:w-14 sm:h-14 mb-2 object-contain" />
         <h1
           className="font-display text-2xl md:text-3xl font-semibold mb-2"
           style={{
@@ -610,13 +611,18 @@ function ResultPageContent() {
             />
           </div>
 
-          {/* Profile emoji */}
-          <div style={{
-            fontSize: '42px',
-            marginBottom: '8px',
-          }}>
-            {profile.emoji}
-          </div>
+          {/* Profile icon */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={profile.icon}
+            alt=""
+            style={{
+              width: '56px',
+              height: '56px',
+              objectFit: 'contain',
+              marginBottom: '8px',
+            }}
+          />
 
           {/* Profile title */}
           <h2 style={{
