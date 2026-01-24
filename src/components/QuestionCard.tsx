@@ -171,11 +171,11 @@ export default function QuestionCard({
     <div className="relative flex-1 flex flex-col overflow-hidden">
       {/* Background image */}
       <div
-        className="absolute inset-0 opacity-30 pointer-events-none transition-opacity duration-500"
+        className="absolute inset-0 bg-cover opacity-30 pointer-events-none transition-opacity duration-500"
         style={{
           backgroundImage: `url(${backgroundImage || 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80'})`,
-          backgroundSize: backgroundSize || 'cover',
           backgroundPosition: backgroundPosition || 'center',
+          transform: backgroundSize ? `scale(${parseFloat(backgroundSize) / 100})` : undefined,
         }}
       />
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />

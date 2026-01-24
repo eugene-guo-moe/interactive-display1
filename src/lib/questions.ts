@@ -20,7 +20,7 @@ const pastBackgrounds = [
 // Modern/futuristic backgrounds for Future questions (Q4-6)
 const futureBackgrounds = [
   'https://images.unsplash.com/photo-1698513924628-4f6e0e4c00f6?w=1920&q=80', // Supertrees at night
-  'https://images.unsplash.com/photo-1702893165989-8ec6c7ddfba7?w=1920&q=80', // Aerial skyline at dusk
+  'https://images.unsplash.com/photo-1556803816-febf2fe0d10b?w=1920&q=80', // Jewel Changi Airport at night
   'https://images.unsplash.com/photo-1747583286685-ee48d3e599f9?w=1920&q=80', // Marina Bay Sands at night
 ]
 
@@ -32,7 +32,7 @@ export const questions: Question[] = [
     icon: '🏛️',
     backgroundImage: pastBackgrounds[0],
     backgroundSize: '115%',
-    backgroundPosition: '55% center',
+    backgroundPosition: '45% center',
     options: [
       { label: 'A', text: 'How Singapore survived despite having almost no natural resources', emoji: '💪' },
       { label: 'B', text: 'How leaders made tough decisions to ensure stability and security', emoji: '🛡️' },
