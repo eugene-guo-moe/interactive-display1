@@ -436,7 +436,7 @@ function ResultPageContent() {
       <div className="relative z-10 flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden max-w-6xl mx-auto w-full">
 
         {/* Left column: Image (+ header on mobile) */}
-        <div className="flex-1 min-h-0 flex flex-col md:w-[58%] md:flex-none">
+        <div className="flex-1 min-h-0 flex flex-col md:w-[58%] md:flex-none md:pr-6">
 
           {/* School logo - mobile only */}
           <div className="md:hidden flex justify-center pt-2 px-4">
@@ -554,15 +554,15 @@ function ResultPageContent() {
           <div className="hidden md:block w-full bg-white/[0.04] backdrop-blur-md rounded-2xl p-6 border border-white/[0.08]">
 
           {/* School logo - desktop only */}
-          <div className="hidden md:block mb-5">
+          <div className="hidden md:flex md:justify-center mb-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/school-logo.png" alt="Riverside Secondary School" className="h-10 object-contain" />
           </div>
 
           {/* Profile Header - desktop only */}
-          <div className="hidden md:block mb-4">
+          <div className="hidden md:block mb-4 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={profile.icon} alt="" className="w-14 h-14 mb-3 block object-contain" />
+            <img src={profile.icon} alt="" className="w-14 h-14 mb-3 mx-auto block object-contain" />
             <h1
               className="font-display text-3xl font-semibold mb-2"
               style={{
@@ -579,7 +579,7 @@ function ResultPageContent() {
 
           {/* Profile Description - desktop only */}
           {showContent && (
-            <div className="hidden md:block mb-5 max-w-md">
+            <div className="hidden md:block mb-5 max-w-md text-center mx-auto">
               <p className="text-white/60 text-sm leading-relaxed mb-2">
                 {profile.description}
               </p>
@@ -623,7 +623,7 @@ function ResultPageContent() {
                   )}
                 </button>
               </div>
-              <p className="text-white/30 text-xs mt-3 tracking-wide">
+              <p className="text-white/30 text-xs mt-3 tracking-wide text-center">
                 Powered by AI • Made with love in Singapore
               </p>
             </div>
