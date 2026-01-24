@@ -663,8 +663,8 @@ function ResultPageContent() {
                   Start Over
                 </button>
                 <button
-                  onClick={handleDownload}
-                  disabled={cardStatus !== 'ready' && cardStatus !== 'error'}
+                  onClick={() => window.open(qrValue, '_blank')}
+                  disabled={cardStatus !== 'ready'}
                   className="btn-press flex-1 py-3.5 rounded-full bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   {cardStatus === 'generating' || cardStatus === 'uploading' ? (
@@ -675,9 +675,9 @@ function ResultPageContent() {
                   ) : (
                     <>
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
-                      {canShare ? 'Save' : 'Download'}
+                      Get Card
                     </>
                   )}
                 </button>
