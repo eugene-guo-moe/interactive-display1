@@ -241,10 +241,31 @@ function ResultPageContent() {
     if (!cardRef.current) return
 
     const captureAndUploadCard = async () => {
-      dbg('All base64 images ready, starting capture...')
+      dbg('All base64 images in state, waiting for browser to decode...')
 
-      // Small delay to ensure browser has painted the images
-      await new Promise(r => setTimeout(r, 100))
+      // Wait for ALL images in the hidden card to be decoded by the browser
+      // This is critical - React may have set src but browser hasn't decoded yet
+      const imgs = cardRef.current!.querySelectorAll('img')
+      dbg(`Found ${imgs.length} images to decode`)
+
+      await Promise.all(
+        Array.from(imgs).map(async (img, i) => {
+          if (img.complete && img.naturalWidth > 0) {
+            dbg(`Image ${i} already complete`)
+            return
+          }
+          try {
+            await img.decode()
+            dbg(`Image ${i} decoded successfully`)
+          } catch (e) {
+            // decode() can fail for some images, fall back to waiting
+            dbg(`Image ${i} decode failed, waiting...`)
+            await new Promise(r => setTimeout(r, 200))
+          }
+        })
+      )
+
+      dbg('All images decoded, starting capture...')
 
       try {
         dbg('Calling toPng...')
