@@ -119,6 +119,7 @@ export default function LoadingPage() {
     // Image generation function
     async function generateImage(): Promise<boolean> {
       try {
+        console.log('[Loading] Starting image generation...')
         abortControllerRef.current = new AbortController()
 
         const response = await fetch('/api/generate', {
@@ -134,12 +135,16 @@ export default function LoadingPage() {
           signal: abortControllerRef.current.signal,
         })
 
+        console.log('[Loading] API response status:', response.status)
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.details || 'Failed to generate image')
+          console.error('[Loading] API error:', errorData)
+          throw new Error(errorData.error || errorData.details || 'Failed to generate image')
         }
 
         const data = await response.json()
+        console.log('[Loading] Generation complete, imageUrl:', data.imageUrl?.substring(0, 50))
 
         // Mark as complete and jump to 100%
         isComplete.current = true
@@ -150,6 +155,7 @@ export default function LoadingPage() {
         setCurrentStep(loadingSteps.length - 1)
 
         // Navigate to result
+        console.log('[Loading] Navigating to /result...')
         setTimeout(() => {
           router.push('/result')
         }, 500)
@@ -158,19 +164,22 @@ export default function LoadingPage() {
       } catch (err) {
         // Ignore abort errors (they're expected when we auto-retry)
         if (err instanceof Error && err.name === 'AbortError') {
+          console.log('[Loading] Request aborted')
           return false
         }
-        console.error('Generation error:', err)
+        console.error('[Loading] Generation error:', err)
         throw err
       }
     }
 
     // Start initial generation, retry once on failure
     generateImage().catch((err) => {
+      console.error('[Loading] First attempt failed:', err)
       if (!isComplete.current && retryCount.current === 0) {
-        console.log('Initial generation failed, retrying immediately...')
+        console.log('[Loading] Retrying generation...')
         retryCount.current = 1
-        generateImage().catch(() => {
+        generateImage().catch((retryErr) => {
+          console.error('[Loading] Retry also failed:', retryErr)
           // Both attempts failed - show error immediately
           if (!isComplete.current) {
             isComplete.current = true
@@ -186,6 +195,7 @@ export default function LoadingPage() {
     // Final timeout at 90 seconds - show timeout UI if still running
     const finalTimeoutId = setTimeout(() => {
       if (!isComplete.current) {
+        console.log('[Loading] 90 second timeout reached')
         setTimedOut(true)
         if (abortControllerRef.current) {
           abortControllerRef.current.abort()
