@@ -183,7 +183,8 @@ export default function LoadingPage() {
       }
     })
 
-    // Final timeout at 90 seconds - show timeout UI if still running
+    // Final timeout at 35 seconds - show timeout UI when progress bar stops
+    // Progress bar runs for 30 seconds, so show feedback shortly after
     const finalTimeoutId = setTimeout(() => {
       if (!isComplete.current) {
         setTimedOut(true)
@@ -191,7 +192,7 @@ export default function LoadingPage() {
           abortControllerRef.current.abort()
         }
       }
-    }, 90000)
+    }, 35000)
 
     return () => {
       clearTimeout(finalTimeoutId)
