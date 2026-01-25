@@ -139,7 +139,7 @@ export default function WelcomePage() {
       {/* CTA */}
       <button
         onClick={handleStart}
-        className="absolute bottom-16 sm:bottom-12 left-1/2 -translate-x-1/2 px-10 py-4 bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold text-lg rounded-full shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all z-20"
+        className="absolute bottom-20 sm:bottom-12 left-1/2 -translate-x-1/2 px-10 py-4 bg-white/95 hover:bg-white text-[#1e3a5f] font-semibold text-lg rounded-full shadow-2xl shadow-white/20 hover:shadow-white/40 hover:scale-105 transition-all z-20"
       >
         Begin Your Journey
       </button>

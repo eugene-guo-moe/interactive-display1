@@ -56,7 +56,7 @@ async function testResultPage() {
       console.log(`\n--- Test ${i + 1}/3: ${profile} profile ---`)
 
       // Use test mode URL params
-      const testUrl = `http://localhost:3005/result?testImage=${encodeURIComponent(imageUrl)}&testProfile=${profile}`
+      const testUrl = `http://localhost:3000/result?testImage=${encodeURIComponent(imageUrl)}&testProfile=${profile}`
       console.log('1. Navigating to result page in test mode...')
       await page.goto(testUrl)
       await page.waitForTimeout(1000)
