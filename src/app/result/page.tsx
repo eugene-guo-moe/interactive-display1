@@ -242,6 +242,8 @@ function ResultPageContent() {
     logoImg: HTMLImageElement | null
     iconImg: HTMLImageElement | null
   }>({ mainImg: null, logoImg: null, iconImg: null })
+  // Store displayImageUrl for retry (in case context state changes)
+  const displayImageUrlRef = useRef<string | null>(null)
 
   const dbg = useCallback((msg: string) => { console.log('[CARD]', msg) }, [])
 
@@ -261,6 +263,13 @@ function ResultPageContent() {
 
   // Use FAL.ai URL for display (fast CDN), or test image in test mode
   const displayImageUrl = isTestMode ? testImage : (resultImageUrl || photoData)
+
+  // Store displayImageUrl in ref for retry (persists even if context changes)
+  useEffect(() => {
+    if (displayImageUrl) {
+      displayImageUrlRef.current = displayImageUrl
+    }
+  }, [displayImageUrl])
 
   // QR code shows card view page (with save button) when ready, otherwise placeholder
   const qrValue = cardUrl
@@ -315,12 +324,15 @@ function ResultPageContent() {
 
   // Phase 1: Prepare images (fetch, preload into Image objects, then set state)
   const prepareCardImages = useCallback(async () => {
+    // Use ref as fallback for retry (context state may have changed)
+    const imageUrl = displayImageUrl || displayImageUrlRef.current
+
     console.log('prepareCardImages called', {
-      displayImageUrl: displayImageUrl?.substring(0, 50) + '...',
+      displayImageUrl: imageUrl?.substring(0, 50) + '...',
       hasStarted: hasStartedImagePrep.current
     })
 
-    if (!displayImageUrl || hasStartedImagePrep.current) return
+    if (!imageUrl || hasStartedImagePrep.current) return
     hasStartedImagePrep.current = true
 
     setCardStatus('generating')
@@ -332,11 +344,11 @@ function ResultPageContent() {
       dbg(`Image preparation attempt ${attempt}/${MAX_RETRIES}`)
       dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
       dbg(`r2Path: ${r2Path}`)
-      dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
+      dbg(`imageUrl: ${imageUrl?.substring(0, 50)}...`)
 
       try {
         // Upload FAL.ai image to R2 first so we can use same-origin URL for canvas
-        let imageUrlForCard = displayImageUrl
+        let imageUrlForCard = imageUrl
         if (resultImageUrl && r2Path && (resultImageUrl.includes('fal.media') || resultImageUrl.includes('fal.ai'))) {
           dbg('Uploading FAL.ai image to R2...')
           try {
@@ -368,8 +380,8 @@ function ResultPageContent() {
         // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
         if (imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
           const urlsToTry = [imageUrlForCard]
-          if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
-            urlsToTry.push(displayImageUrl)
+          if (imageUrlForCard !== imageUrl && imageUrl && !imageUrl.startsWith('data:')) {
+            urlsToTry.push(imageUrl)
           }
           dbg(`Will try ${urlsToTry.length} URL(s) for base64`)
           for (const url of urlsToTry) {
