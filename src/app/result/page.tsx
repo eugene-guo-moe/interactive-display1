@@ -62,10 +62,17 @@ function ResultPageContent() {
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedCardGeneration = useRef(false)
 
-  const dbg = useCallback((msg: string) => { console.log('[CARD]', msg) }, [])
+  // Debug mode: add ?debug=1 to URL to see on-screen logs
+  const showDebug = searchParams.get('debug') === '1'
+
+  const dbg = useCallback((msg: string) => {
+    console.log('[CARD]', msg)
+    setDebugLogs(prev => [...prev.slice(-20), `${new Date().toLocaleTimeString()}: ${msg}`])
+  }, [])
 
   // Test mode: allow passing image URL and profile via query params
   // Usage: /result?testImage=https://...&testProfile=builder
@@ -999,6 +1006,17 @@ function ResultPageContent() {
           </div>
         </div>
       </div>
+
+      {/* On-screen debug panel - add ?debug=1 to URL */}
+      {showDebug && (
+        <div className="fixed bottom-0 left-0 right-0 bg-black/90 text-green-400 text-xs font-mono p-2 max-h-48 overflow-y-auto z-[99999]">
+          <div className="font-bold text-yellow-400 mb-1">Debug Logs (scroll down for latest):</div>
+          {debugLogs.map((log, i) => (
+            <div key={i} className="py-0.5 border-b border-green-900/30">{log}</div>
+          ))}
+          {debugLogs.length === 0 && <div className="text-gray-500">Waiting for logs...</div>}
+        </div>
+      )}
     </div>
   )
 }
