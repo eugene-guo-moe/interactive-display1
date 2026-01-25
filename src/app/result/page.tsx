@@ -794,13 +794,12 @@ function ResultPageContent() {
         ref={cardRef}
         style={{
           position: 'fixed',
-          left: 0,
+          left: '-9999px',  // Off-screen instead of z-index (mobile Safari may not decode behind-screen images)
           top: 0,
           width: '540px',
           height: '960px',
           background: `radial-gradient(circle at 50% 35%, ${currentStyle.color}35 0%, ${currentStyle.color}10 30%, transparent 60%), #0a0a0a`,
           fontFamily: 'system-ui, -apple-system, sans-serif',
-          zIndex: -9999,
           pointerEvents: 'none',
           overflow: 'hidden',
         }}
@@ -825,6 +824,7 @@ function ResultPageContent() {
             <img
               src={logoBase64 || '/school-logo.png'}
               alt="Riverside Secondary School"
+              loading="eager"
               style={{
                 height: '52px',
               }}
@@ -866,6 +866,7 @@ function ResultPageContent() {
             <img
               src={iconBase64 || profile.icon}
               alt=""
+              loading="eager"
               style={{
                 width: '48px',
                 height: '48px',
@@ -938,6 +939,7 @@ function ResultPageContent() {
                 <img
                   src={imageBase64 || displayImageUrl || ''}
                   alt="Your Singapore moment"
+                  loading="eager"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   crossOrigin="anonymous"
                 />
