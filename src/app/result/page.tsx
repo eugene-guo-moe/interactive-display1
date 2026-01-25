@@ -230,44 +230,64 @@ function ResultPageContent() {
         } catch (e) { dbg(`Logo base64 failed: ${e}`) }
       }
 
-      // Directly set img src on the DOM to avoid React state race condition
+      // Helper to set image src and wait for it to load
+      const setImageAndWait = async (el: HTMLImageElement | null, src: string, name: string): Promise<boolean> => {
+        if (!el || !src) {
+          dbg(`Skip ${name}: el=${!!el}, src=${!!src}`)
+          return false
+        }
+        return new Promise((resolve) => {
+          const onLoad = () => {
+            dbg(`${name} loaded successfully`)
+            resolve(true)
+          }
+          const onError = () => {
+            dbg(`WARNING: ${name} failed to load`)
+            resolve(false)
+          }
+          // If already has this src and is complete, skip
+          if (el.src === src && el.complete && el.naturalWidth > 0) {
+            dbg(`${name} already loaded`)
+            resolve(true)
+            return
+          }
+          el.onload = onLoad
+          el.onerror = onError
+          el.src = src
+          // Fallback timeout in case events don't fire
+          setTimeout(() => {
+            if (el.complete) {
+              dbg(`${name} complete via timeout`)
+              resolve(true)
+            } else {
+              dbg(`WARNING: ${name} timeout`)
+              resolve(false)
+            }
+          }, 3000)
+        })
+      }
+
+      // Set images on DOM and wait for them to load
       if (cardRef.current) {
-        // Set main image
-        if (base64Img) {
-          const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
-          if (imgEl) {
-            imgEl.src = base64Img
-            dbg('Set main img src directly on DOM')
-          } else {
-            dbg('WARNING: main img element not found in card div')
-          }
-        }
-        // Set logo directly on DOM (using local var, not stale state)
-        if (logoB64) {
-          const logoEl = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
-          if (logoEl) {
-            logoEl.src = logoB64
-            dbg('Set logo src directly on DOM')
-          } else {
-            dbg('WARNING: logo element not found in card div')
-          }
-        }
-        // Set icon directly on DOM (using local var, not stale state)
-        if (iconB64) {
-          const iconEl = cardRef.current.querySelector('img[alt=""]') as HTMLImageElement
-          if (iconEl) {
-            iconEl.src = iconB64
-            dbg('Set icon src directly on DOM')
-          } else {
-            dbg('WARNING: icon element not found in card div')
-          }
-        }
+        const mainImgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
+        const logoEl = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
+        const iconEl = cardRef.current.querySelector('img[alt=""]') as HTMLImageElement
+
+        dbg(`Found elements: main=${!!mainImgEl}, logo=${!!logoEl}, icon=${!!iconEl}`)
+
+        // Load all images in parallel and wait for all
+        const loadResults = await Promise.all([
+          setImageAndWait(mainImgEl, base64Img || '', 'main image'),
+          setImageAndWait(logoEl, logoB64 || '', 'logo'),
+          setImageAndWait(iconEl, iconB64 || '', 'icon'),
+        ])
+        dbg(`Load results: main=${loadResults[0]}, logo=${loadResults[1]}, icon=${loadResults[2]}`)
       } else {
         dbg(`Skip DOM set: cardRef=${!!cardRef.current}`)
       }
 
-      // Wait for image to decode and React to settle
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Additional settle time for rendering
+      await new Promise(resolve => setTimeout(resolve, 500))
       dbg('Starting toPng capture...')
 
       // Generate base card image - skip fonts to avoid CSP blocking external font fetch
