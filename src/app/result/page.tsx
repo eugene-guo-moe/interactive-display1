@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuiz, ProfileType } from '@/context/QuizContext'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
-import { toPng } from 'html-to-image'
+import { profiles, Profile } from '@/types/quiz'
 
 // Profile styling configuration
 const profileStyles: Record<ProfileType, { image: string; color: string }> = {
@@ -37,6 +37,178 @@ const profileStyles: Record<ProfileType, { image: string; color: string }> = {
 // Worker URL for R2 upload
 const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
 
+// Canvas-based card generation (bypasses html-to-image for iOS Safari compatibility)
+function generateCardCanvas(
+  mainImg: HTMLImageElement,
+  logoImg: HTMLImageElement,
+  iconImg: HTMLImageElement,
+  profile: Profile,
+  color: string
+): string {
+  const W = 540, H = 960
+  const canvas = document.createElement('canvas')
+  canvas.width = W * 2  // 2x for retina
+  canvas.height = H * 2
+  const ctx = canvas.getContext('2d')!
+  ctx.scale(2, 2)  // Scale for retina
+
+  // Helper: draw rounded rectangle path
+  const roundedRect = (x: number, y: number, w: number, h: number, r: number) => {
+    ctx.beginPath()
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + w - r, y)
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+    ctx.lineTo(x + w, y + h - r)
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+    ctx.lineTo(x + r, y + h)
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+    ctx.lineTo(x, y + r)
+    ctx.quadraticCurveTo(x, y, x + r, y)
+    ctx.closePath()
+  }
+
+  // Helper: draw corner bracket
+  const drawBracket = (x: number, y: number, w: number, h: number, corner: 'tl' | 'tr' | 'bl' | 'br') => {
+    ctx.strokeStyle = `${color}B0`
+    ctx.lineWidth = 2.5
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    const r = 8
+    if (corner === 'tl') {
+      ctx.moveTo(x, y + h)
+      ctx.lineTo(x, y + r)
+      ctx.quadraticCurveTo(x, y, x + r, y)
+      ctx.lineTo(x + w, y)
+    } else if (corner === 'tr') {
+      ctx.moveTo(x + w, y + h)
+      ctx.lineTo(x + w, y + r)
+      ctx.quadraticCurveTo(x + w, y, x + w - r, y)
+      ctx.lineTo(x, y)
+    } else if (corner === 'bl') {
+      ctx.moveTo(x, y)
+      ctx.lineTo(x, y + h - r)
+      ctx.quadraticCurveTo(x, y + h, x + r, y + h)
+      ctx.lineTo(x + w, y + h)
+    } else {
+      ctx.moveTo(x + w, y)
+      ctx.lineTo(x + w, y + h - r)
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+      ctx.lineTo(x, y + h)
+    }
+    ctx.stroke()
+  }
+
+  // Helper: wrap text to multiple lines
+  const wrapText = (text: string, maxWidth: number, lineHeight: number, y: number) => {
+    const words = text.split(' ')
+    let line = ''
+    let currentY = y
+    for (const word of words) {
+      const testLine = line + word + ' '
+      const metrics = ctx.measureText(testLine)
+      if (metrics.width > maxWidth && line !== '') {
+        ctx.fillText(line.trim(), W / 2, currentY)
+        line = word + ' '
+        currentY += lineHeight
+      } else {
+        line = testLine
+      }
+    }
+    ctx.fillText(line.trim(), W / 2, currentY)
+    return currentY
+  }
+
+  // 1. Background
+  ctx.fillStyle = '#0a0a0a'
+  ctx.fillRect(0, 0, W, H)
+
+  // Radial gradient overlay
+  const gradient = ctx.createRadialGradient(W / 2, H * 0.35, 0, W / 2, H * 0.35, W * 0.8)
+  gradient.addColorStop(0, `${color}35`)
+  gradient.addColorStop(0.3, `${color}10`)
+  gradient.addColorStop(0.6, 'transparent')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, W, H)
+
+  // 2. Logo (centered at top)
+  const logoH = 52
+  const logoW = logoImg.naturalWidth * (logoH / logoImg.naturalHeight)
+  ctx.drawImage(logoImg, (W - logoW) / 2, 24, logoW, logoH)
+
+  // 3. Title
+  ctx.fillStyle = color
+  ctx.font = 'bold 32px system-ui, -apple-system, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  ctx.shadowColor = `${color}50`
+  ctx.shadowBlur = 40
+  ctx.fillText(profile.title, W / 2, 90)
+  ctx.shadowBlur = 0
+
+  // 4. Tagline
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'
+  ctx.font = 'italic 15px system-ui, -apple-system, sans-serif'
+  ctx.fillText(`"${profile.tagline}"`, W / 2, 130)
+
+  // 5. Icon
+  const iconSize = 48
+  ctx.drawImage(iconImg, (W - iconSize) / 2, 158, iconSize, iconSize)
+
+  // 6. Main image with rounded corners
+  const imgX = 40, imgY = 224, imgW = W - 80, imgH = 480
+  ctx.save()
+  roundedRect(imgX, imgY, imgW, imgH, 12)
+  ctx.clip()
+
+  // Cover fit calculation
+  const imgAspect = mainImg.naturalWidth / mainImg.naturalHeight
+  const boxAspect = imgW / imgH
+  let sx = 0, sy = 0, sw = mainImg.naturalWidth, sh = mainImg.naturalHeight
+  if (imgAspect > boxAspect) {
+    // Image wider than box - crop sides
+    sw = mainImg.naturalHeight * boxAspect
+    sx = (mainImg.naturalWidth - sw) / 2
+  } else {
+    // Image taller than box - crop top/bottom
+    sh = mainImg.naturalWidth / boxAspect
+    sy = (mainImg.naturalHeight - sh) / 2
+  }
+  ctx.drawImage(mainImg, sx, sy, sw, sh, imgX, imgY, imgW, imgH)
+  ctx.restore()
+
+  // Image shadow/outline
+  ctx.strokeStyle = `${color}30`
+  ctx.lineWidth = 1
+  roundedRect(imgX, imgY, imgW, imgH, 12)
+  ctx.stroke()
+
+  // 7. Corner brackets
+  const bracketSize = 28, bracketOffset = 8
+  drawBracket(imgX - bracketOffset, imgY - bracketOffset, bracketSize, bracketSize, 'tl')
+  drawBracket(imgX + imgW - bracketSize + bracketOffset, imgY - bracketOffset, bracketSize, bracketSize, 'tr')
+  drawBracket(imgX - bracketOffset, imgY + imgH - bracketSize + bracketOffset, bracketSize, bracketSize, 'bl')
+  drawBracket(imgX + imgW - bracketSize + bracketOffset, imgY + imgH - bracketSize + bracketOffset, bracketSize, bracketSize, 'br')
+
+  // 8. Description
+  ctx.fillStyle = 'rgba(255,255,255,0.65)'
+  ctx.font = '14px system-ui, -apple-system, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  const descY = wrapText(profile.description, W - 60, 22, 725)
+
+  // 9. Strength
+  ctx.fillStyle = color
+  ctx.font = '600 15px system-ui, -apple-system, sans-serif'
+  ctx.fillText(`Your strength: ${profile.strength}`, W / 2, descY + 30)
+
+  // 10. Footer
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'
+  ctx.font = '10px system-ui, -apple-system, sans-serif'
+  ctx.fillText('Powered by AI • Made with love in Singapore', W / 2, H - 24)
+
+  return canvas.toDataURL('image/png')
+}
+
 type CardStatus = 'generating' | 'uploading' | 'ready' | 'error'
 
 // Test mode profiles for testing different profile types
@@ -63,7 +235,6 @@ function ResultPageContent() {
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
   const [cardCaptured, setCardCaptured] = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedImagePrep = useRef(false)
   // Store preloaded Image objects to ensure iOS Safari has decoded them
   const preloadedImagesRef = useRef<{
@@ -81,7 +252,7 @@ function ResultPageContent() {
   const isTestMode = !!testImage
 
   const profile = isTestMode && testProfile && testProfiles[testProfile]
-    ? require('@/types/quiz').profiles[testProfile]
+    ? profiles[testProfile]
     : getProfile()
   const profileType = isTestMode && testProfile && testProfiles[testProfile]
     ? testProfile
@@ -145,7 +316,6 @@ function ResultPageContent() {
   // Phase 1: Prepare images (fetch, preload into Image objects, then set state)
   const prepareCardImages = useCallback(async () => {
     console.log('prepareCardImages called', {
-      hasCardRef: !!cardRef.current,
       displayImageUrl: displayImageUrl?.substring(0, 50) + '...',
       hasStarted: hasStartedImagePrep.current
     })
@@ -292,61 +462,30 @@ function ResultPageContent() {
     }
   }, [displayImageUrl, resultImageUrl, r2Path, profile, dbg, preloadImage])
 
-  // Phase 2: Capture card AFTER React has rendered with base64 images
-  // This effect runs when all three base64 states are set
+  // Phase 2: Generate card using canvas (bypasses html-to-image for iOS Safari)
+  // This effect runs when preloaded images are ready
   useEffect(() => {
-    // Only proceed when ALL images are ready and not already captured
-    if (!imageBase64 || !logoBase64 || !iconBase64) return
     if (cardCaptured) return
-    if (!cardRef.current) return
 
-    const captureAndUploadCard = async () => {
-      dbg('All base64 images in state, checking preloaded images...')
+    // Check if preloaded images are ready
+    const { mainImg, logoImg, iconImg } = preloadedImagesRef.current
+    if (!mainImg || !logoImg || !iconImg) return
 
-      // Verify preloaded images are available (they should be, since we preloaded before setting state)
-      const { mainImg, logoImg, iconImg } = preloadedImagesRef.current
-      dbg(`Preloaded refs: main=${!!mainImg}, logo=${!!logoImg}, icon=${!!iconImg}`)
-
-      // Also wait for DOM images to be ready as a fallback
-      const imgs = cardRef.current!.querySelectorAll('img')
-      dbg(`Found ${imgs.length} DOM images to verify`)
-
-      await Promise.all(
-        Array.from(imgs).map(async (img, i) => {
-          if (img.complete && img.naturalWidth > 0) {
-            dbg(`DOM Image ${i} already complete`)
-            return
-          }
-          try {
-            await img.decode()
-            dbg(`DOM Image ${i} decoded successfully`)
-          } catch (e) {
-            // decode() can fail for some images, fall back to waiting
-            dbg(`DOM Image ${i} decode failed, waiting...`)
-            await new Promise(r => setTimeout(r, 200))
-          }
-        })
-      )
-
-      dbg('All images verified, starting capture...')
+    const generateAndUploadCard = async () => {
+      dbg('Preloaded images ready, generating card via canvas...')
+      dbg(`Image sizes: main=${mainImg.naturalWidth}x${mainImg.naturalHeight}, logo=${logoImg.naturalWidth}x${logoImg.naturalHeight}, icon=${iconImg.naturalWidth}x${iconImg.naturalHeight}`)
 
       try {
-        dbg('Calling toPng...')
-        const baseCardDataUrl = await toPng(cardRef.current!, {
-          quality: 1,
-          pixelRatio: 2,
-          cacheBust: true,
-          skipFonts: true,
-          backgroundColor: '#0a0a0a',
-        })
+        // Generate card using canvas (no DOM dependency)
+        const cardDataUrl = generateCardCanvas(mainImg, logoImg, iconImg, profile, currentStyle.color)
+        dbg(`Card generated: ${Math.round(cardDataUrl.length / 1024)} KB`)
 
-        console.log('Card captured successfully')
-        setCardDataUrl(baseCardDataUrl)
+        setCardDataUrl(cardDataUrl)
         setCardCaptured(true)
         setCardStatus('uploading')
 
         // Extract base64 data for upload
-        const base64Data = baseCardDataUrl.split(',')[1]
+        const base64Data = cardDataUrl.split(',')[1]
         const cardPath = `cards/${profileType}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`
 
         // Upload to R2 via worker
@@ -370,7 +509,7 @@ function ResultPageContent() {
           throw new Error('Upload failed')
         }
       } catch (err) {
-        console.error('Card capture error:', err)
+        console.error('Card generation error:', err)
         if (err instanceof Error) {
           console.error('Error:', err.message)
         }
@@ -378,8 +517,9 @@ function ResultPageContent() {
       }
     }
 
-    captureAndUploadCard()
-  }, [imageBase64, logoBase64, iconBase64, cardCaptured, profileType, setQrUrl, dbg])
+    generateAndUploadCard()
+  // imageBase64 in deps triggers effect when prepareCardImages completes (sets state after preloading)
+  }, [cardCaptured, profile, currentStyle.color, profileType, setQrUrl, dbg, imageBase64])
 
   // Start image preparation when display image is loaded
   useEffect(() => {
@@ -850,201 +990,6 @@ function ResultPageContent() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Hidden card for generation - positioned behind main content */}
-      <div
-        ref={cardRef}
-        style={{
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          zIndex: -9999,  // Behind everything (images preloaded in JS, so Safari decode issue is bypassed)
-          width: '540px',
-          height: '960px',
-          background: `radial-gradient(circle at 50% 35%, ${currentStyle.color}35 0%, ${currentStyle.color}10 30%, transparent 60%), #0a0a0a`,
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Card content - mirrors the page display layout */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          height: '100%',
-          padding: '24px 28px',
-        }}>
-          {/* School logo + name at top */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginBottom: '14px',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={logoBase64 || '/school-logo.png'}
-              alt="Riverside Secondary School"
-              loading="eager"
-              style={{
-                height: '52px',
-              }}
-            />
-          </div>
-
-          {/* Profile title */}
-          <h2 style={{
-            fontSize: '32px',
-            fontWeight: 700,
-            color: currentStyle.color,
-            textAlign: 'center',
-            marginBottom: '6px',
-            textShadow: `0 0 40px ${currentStyle.color}50`,
-          }}>
-            {profile.title}
-          </h2>
-
-          {/* Tagline in quotes */}
-          <p style={{
-            fontSize: '15px',
-            color: 'rgba(255,255,255,0.7)',
-            fontStyle: 'italic',
-            textAlign: 'center',
-            marginBottom: '12px',
-            padding: '0 20px',
-          }}>
-            &ldquo;{profile.tagline}&rdquo;
-          </p>
-
-          {/* Profile icon */}
-          <div style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '14px',
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={iconBase64 || profile.icon}
-              alt=""
-              loading="eager"
-              style={{
-                width: '48px',
-                height: '48px',
-                objectFit: 'contain',
-              }}
-            />
-          </div>
-
-          {/* Image with decorative corner brackets */}
-          <div style={{
-            position: 'relative',
-            width: '90%',
-            maxWidth: '460px',
-            marginBottom: '18px',
-            flex: '1 1 auto',
-            minHeight: 0,
-          }}>
-            {/* Corner decorations */}
-            <div style={{
-              position: 'absolute',
-              top: '-8px',
-              left: '-8px',
-              width: '28px',
-              height: '28px',
-              borderLeft: `2.5px solid ${currentStyle.color}B0`,
-              borderTop: `2.5px solid ${currentStyle.color}B0`,
-              borderTopLeftRadius: '8px',
-            }} />
-            <div style={{
-              position: 'absolute',
-              top: '-8px',
-              right: '-8px',
-              width: '28px',
-              height: '28px',
-              borderRight: `2.5px solid ${currentStyle.color}B0`,
-              borderTop: `2.5px solid ${currentStyle.color}B0`,
-              borderTopRightRadius: '8px',
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-8px',
-              left: '-8px',
-              width: '28px',
-              height: '28px',
-              borderLeft: `2.5px solid ${currentStyle.color}B0`,
-              borderBottom: `2.5px solid ${currentStyle.color}B0`,
-              borderBottomLeftRadius: '8px',
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: '-8px',
-              right: '-8px',
-              width: '28px',
-              height: '28px',
-              borderRight: `2.5px solid ${currentStyle.color}B0`,
-              borderBottom: `2.5px solid ${currentStyle.color}B0`,
-              borderBottomRightRadius: '8px',
-            }} />
-
-            {/* Image container */}
-            <div style={{
-              borderRadius: '12px',
-              overflow: 'hidden',
-              boxShadow: `0 25px 50px -12px ${currentStyle.color}50`,
-              outline: `1px solid ${currentStyle.color}30`,
-              height: '100%',
-            }}>
-              {(imageBase64 || displayImageUrl) && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={imageBase64 || displayImageUrl || ''}
-                  alt="Your Singapore moment"
-                  loading="eager"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  crossOrigin="anonymous"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          <p style={{
-            fontSize: '14px',
-            color: 'rgba(255,255,255,0.65)',
-            lineHeight: 1.6,
-            textAlign: 'center',
-            marginBottom: '10px',
-            padding: '0 16px',
-          }}>
-            {profile.description}
-          </p>
-
-          {/* Strength */}
-          <p style={{
-            fontSize: '15px',
-            fontWeight: 600,
-            color: currentStyle.color,
-            textAlign: 'center',
-            marginBottom: '8px',
-          }}>
-            Your strength: {profile.strength}
-          </p>
-
-          {/* Footer */}
-          <div style={{
-            marginTop: 'auto',
-            textAlign: 'center',
-            paddingTop: '8px',
-          }}>
-            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
-              Powered by AI • Made with love in Singapore
-            </p>
-          </div>
         </div>
       </div>
 
