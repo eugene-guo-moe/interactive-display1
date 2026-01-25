@@ -59,7 +59,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://api.fontshare.com https://fonts.googleapis.com",
               "font-src 'self' https://cdn.fontshare.com https://fonts.gstatic.com",
               "img-src 'self' https://images.unsplash.com https://riversidesec.eugene-ff3.workers.dev https://*.fal.media data: blob:",
-              "connect-src 'self' https://riversidesec.eugene-ff3.workers.dev https://*.fal.media",
+              "connect-src 'self' https://riversidesec.eugene-ff3.workers.dev https://*.fal.media https://images.unsplash.com https://*.fal.ai",
               "media-src 'self' blob:",
               "object-src 'none'",
               "frame-ancestors 'none'",
