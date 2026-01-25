@@ -236,35 +236,73 @@ function ResultPageContent() {
         dbg(`Skip fetch: base64=${!!base64Img}, url=${!!imageUrlForCard}`)
       }
 
-      // Convert icon and logo to base64 for reliable card rendering
+      // Convert icon and logo to base64 using fetch (more reliable on iOS Safari)
       if (!iconBase64 && profile.icon) {
         try {
-          const iconB64 = await convertImageToBase64(profile.icon)
-          setIconBase64(iconB64)
+          dbg(`Fetching icon: ${profile.icon}`)
+          const iconRes = await fetch(profile.icon, { mode: 'cors' })
+          if (iconRes.ok) {
+            const iconBlob = await iconRes.blob()
+            const iconB64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(iconBlob)
+            })
+            setIconBase64(iconB64)
+            dbg(`Icon base64 OK: ${Math.round(iconB64.length / 1024)} KB`)
+          }
         } catch (e) { dbg(`Icon base64 failed: ${e}`) }
       }
       if (!logoBase64) {
         try {
-          const logoB64 = await convertImageToBase64('/school-logo.png')
-          setLogoBase64(logoB64)
+          dbg('Fetching logo: /school-logo.png')
+          const logoRes = await fetch('/school-logo.png')
+          if (logoRes.ok) {
+            const logoBlob = await logoRes.blob()
+            const logoB64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(logoBlob)
+            })
+            setLogoBase64(logoB64)
+            dbg(`Logo base64 OK: ${Math.round(logoB64.length / 1024)} KB`)
+          }
         } catch (e) { dbg(`Logo base64 failed: ${e}`) }
       }
 
-      // Directly set img src on the DOM to avoid React state race condition
-      if (base64Img && cardRef.current) {
-        const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
-        if (imgEl) {
-          imgEl.src = base64Img
-          dbg('Set img src directly on DOM element')
-        } else {
-          dbg('WARNING: img element not found in card div')
+      // Directly set all img src on the DOM to avoid React state race condition
+      if (cardRef.current) {
+        // Set main photo
+        if (base64Img) {
+          const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
+          if (imgEl) {
+            imgEl.src = base64Img
+            dbg('Set main photo src directly on DOM')
+          } else {
+            dbg('WARNING: main photo img element not found')
+          }
+        }
+        // Set logo
+        const logoEl = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
+        if (logoEl && logoBase64) {
+          logoEl.src = logoBase64
+          dbg('Set logo src directly on DOM')
+        }
+        // Set icon
+        const iconEl = cardRef.current.querySelector('img[alt="profile-icon"]') as HTMLImageElement
+        if (iconEl && iconBase64) {
+          iconEl.src = iconBase64
+          dbg('Set icon src directly on DOM')
         }
       } else {
-        dbg(`Skip DOM set: base64=${!!base64Img}, cardRef=${!!cardRef.current}`)
+        dbg(`Skip DOM set: cardRef=${!!cardRef.current}`)
       }
 
-      // Wait for image to decode and React to settle
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Wait longer for images to decode on mobile
+      dbg('Waiting for images to decode...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
       dbg('Starting toPng capture...')
 
       // Generate base card image - skip fonts to avoid CSP blocking external font fetch
@@ -785,18 +823,17 @@ function ResultPageContent() {
         </div>
       </div>
 
-      {/* Hidden card for generation - positioned behind main content */}
+      {/* Hidden card for generation - positioned off-screen */}
       <div
         ref={cardRef}
         style={{
           position: 'fixed',
-          left: 0,
+          left: '-9999px',
           top: 0,
           width: '540px',
           height: '960px',
           background: `radial-gradient(circle at 50% 35%, ${currentStyle.color}35 0%, ${currentStyle.color}10 30%, transparent 60%), #0a0a0a`,
           fontFamily: 'system-ui, -apple-system, sans-serif',
-          zIndex: -9999,
           pointerEvents: 'none',
           overflow: 'hidden',
         }}
@@ -861,7 +898,7 @@ function ResultPageContent() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={iconBase64 || profile.icon}
-              alt=""
+              alt="profile-icon"
               style={{
                 width: '48px',
                 height: '48px',
