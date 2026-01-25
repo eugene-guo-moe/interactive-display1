@@ -324,142 +324,163 @@ function ResultPageContent() {
     hasStartedImagePrep.current = true
 
     setCardStatus('generating')
-    dbg('Image preparation started')
-    dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
-    dbg(`r2Path: ${r2Path}`)
-    dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
 
-    try {
-      // Upload FAL.ai image to R2 first so we can use same-origin URL for canvas
-      let imageUrlForCard = displayImageUrl
-      if (resultImageUrl && r2Path && (resultImageUrl.includes('fal.media') || resultImageUrl.includes('fal.ai'))) {
-        dbg('Uploading FAL.ai image to R2...')
-        try {
-          const timePeriod = r2Path.split('/')[1] || 'present'
-          const uploadRes = await fetch(`${WORKER_URL}/upload-to-r2`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ falUrl: resultImageUrl, r2Path, timePeriod }),
-          })
-          if (uploadRes.ok) {
-            const data = await uploadRes.json()
-            imageUrlForCard = data.r2Url
-            dbg(`R2 upload OK: ${imageUrlForCard.substring(0, 60)}`)
-          } else {
-            dbg(`R2 upload failed: ${uploadRes.status} ${uploadRes.statusText}`)
-          }
-        } catch (e) {
-          dbg(`R2 upload error: ${e}`)
-        }
-      } else {
-        dbg(`Skipped R2 upload: resultImageUrl=${!!resultImageUrl}, r2Path=${!!r2Path}`)
-      }
+    const MAX_RETRIES = 3
+    const RETRY_DELAY = 1000
 
-      // Fetch all images as base64 first
-      let mainB64: string | null = null
-      let iconB64: string | null = null
-      let logoB64: string | null = null
+    const attemptPrepare = async (attempt = 1): Promise<void> => {
+      dbg(`Image preparation attempt ${attempt}/${MAX_RETRIES}`)
+      dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
+      dbg(`r2Path: ${r2Path}`)
+      dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
 
-      // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
-      if (imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
-        const urlsToTry = [imageUrlForCard]
-        if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
-          urlsToTry.push(displayImageUrl)
-        }
-        dbg(`Will try ${urlsToTry.length} URL(s) for base64`)
-        for (const url of urlsToTry) {
-          dbg(`Fetching: ${url.substring(0, 60)}...`)
+      try {
+        // Upload FAL.ai image to R2 first so we can use same-origin URL for canvas
+        let imageUrlForCard = displayImageUrl
+        if (resultImageUrl && r2Path && (resultImageUrl.includes('fal.media') || resultImageUrl.includes('fal.ai'))) {
+          dbg('Uploading FAL.ai image to R2...')
           try {
-            const imgResponse = await fetch(url, { mode: 'cors' })
-            dbg(`Response: ${imgResponse.status} ${imgResponse.statusText}, type=${imgResponse.type}`)
-            if (imgResponse.ok) {
-              const blob = await imgResponse.blob()
-              dbg(`Blob: ${blob.size} bytes, type=${blob.type}`)
-              mainB64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve(reader.result as string)
-                reader.onerror = reject
-                reader.readAsDataURL(blob)
-              })
-              dbg(`Main image base64 OK: ${Math.round(mainB64.length / 1024)} KB`)
-              break
+            const timePeriod = r2Path.split('/')[1] || 'present'
+            const uploadRes = await fetch(`${WORKER_URL}/upload-to-r2`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ falUrl: resultImageUrl, r2Path, timePeriod }),
+            })
+            if (uploadRes.ok) {
+              const data = await uploadRes.json()
+              imageUrlForCard = data.r2Url
+              dbg(`R2 upload OK: ${imageUrlForCard.substring(0, 60)}`)
             } else {
-              dbg(`Fetch failed: ${imgResponse.status}`)
+              dbg(`R2 upload failed: ${uploadRes.status} ${uploadRes.statusText}`)
             }
-          } catch (convErr) {
-            dbg(`Fetch error: ${convErr}`)
+          } catch (e) {
+            dbg(`R2 upload error: ${e}`)
           }
+        } else {
+          dbg(`Skipped R2 upload: resultImageUrl=${!!resultImageUrl}, r2Path=${!!r2Path}`)
         }
-      } else if (imageUrlForCard?.startsWith('data:')) {
-        mainB64 = imageUrlForCard
-      }
 
-      // Convert icon to base64
-      if (profile.icon) {
+        // Fetch all images as base64 first
+        let mainB64: string | null = null
+        let iconB64: string | null = null
+        let logoB64: string | null = null
+
+        // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
+        if (imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
+          const urlsToTry = [imageUrlForCard]
+          if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
+            urlsToTry.push(displayImageUrl)
+          }
+          dbg(`Will try ${urlsToTry.length} URL(s) for base64`)
+          for (const url of urlsToTry) {
+            dbg(`Fetching: ${url.substring(0, 60)}...`)
+            try {
+              const imgResponse = await fetch(url, { mode: 'cors' })
+              dbg(`Response: ${imgResponse.status} ${imgResponse.statusText}, type=${imgResponse.type}`)
+              if (imgResponse.ok) {
+                const blob = await imgResponse.blob()
+                dbg(`Blob: ${blob.size} bytes, type=${blob.type}`)
+                mainB64 = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader()
+                  reader.onloadend = () => resolve(reader.result as string)
+                  reader.onerror = reject
+                  reader.readAsDataURL(blob)
+                })
+                dbg(`Main image base64 OK: ${Math.round(mainB64.length / 1024)} KB`)
+                break
+              } else {
+                dbg(`Fetch failed: ${imgResponse.status}`)
+              }
+            } catch (convErr) {
+              dbg(`Fetch error: ${convErr}`)
+            }
+          }
+        } else if (imageUrlForCard?.startsWith('data:')) {
+          mainB64 = imageUrlForCard
+        }
+
+        // Convert icon to base64
+        if (profile.icon) {
+          try {
+            const iconRes = await fetch(profile.icon)
+            const iconBlob = await iconRes.blob()
+            iconB64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(iconBlob)
+            })
+            dbg(`Icon base64 OK: ${Math.round(iconB64.length / 1024)} KB`)
+          } catch (e) { dbg(`Icon base64 failed: ${e}`) }
+        }
+
+        // Convert logo to base64
         try {
-          const iconRes = await fetch(profile.icon)
-          const iconBlob = await iconRes.blob()
-          iconB64 = await new Promise<string>((resolve, reject) => {
+          const logoRes = await fetch('/school-logo.png')
+          const logoBlob = await logoRes.blob()
+          logoB64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
             reader.onerror = reject
-            reader.readAsDataURL(iconBlob)
+            reader.readAsDataURL(logoBlob)
           })
-          dbg(`Icon base64 OK: ${Math.round(iconB64.length / 1024)} KB`)
-        } catch (e) { dbg(`Icon base64 failed: ${e}`) }
+          dbg(`Logo base64 OK: ${Math.round(logoB64.length / 1024)} KB`)
+        } catch (e) { dbg(`Logo base64 failed: ${e}`) }
+
+        // CRITICAL: Preload images into Image objects BEFORE setting state
+        // This forces iOS Safari to decode the images into memory
+        dbg('Preloading images into Image objects...')
+        const preloadPromises: Promise<HTMLImageElement | null>[] = []
+
+        if (mainB64) {
+          preloadPromises.push(preloadImage(mainB64).catch(() => null))
+        } else {
+          preloadPromises.push(Promise.resolve(null))
+        }
+        if (logoB64) {
+          preloadPromises.push(preloadImage(logoB64).catch(() => null))
+        } else {
+          preloadPromises.push(Promise.resolve(null))
+        }
+        if (iconB64) {
+          preloadPromises.push(preloadImage(iconB64).catch(() => null))
+        } else {
+          preloadPromises.push(Promise.resolve(null))
+        }
+
+        const [mainImg, logoImg, iconImg] = await Promise.all(preloadPromises)
+        dbg(`Preload complete: main=${!!mainImg}, logo=${!!logoImg}, icon=${!!iconImg}`)
+
+        // Check if critical images loaded - if not, throw to trigger retry
+        if (!mainImg || !logoImg || !iconImg) {
+          throw new Error(`Missing images: main=${!!mainImg}, logo=${!!logoImg}, icon=${!!iconImg}`)
+        }
+
+        // Store preloaded Image objects in ref (ensures they stay in memory)
+        preloadedImagesRef.current = { mainImg, logoImg, iconImg }
+
+        // NOW set state - React will render, and images are already decoded
+        if (mainB64) setImageBase64(mainB64)
+        if (logoB64) setLogoBase64(logoB64)
+        if (iconB64) setIconBase64(iconB64)
+
+        dbg('Image preparation complete - images preloaded and state set')
+      } catch (err) {
+        console.error(`Image preparation error (attempt ${attempt}):`, err)
+
+        if (attempt < MAX_RETRIES) {
+          dbg(`Retrying in ${RETRY_DELAY}ms...`)
+          await new Promise(r => setTimeout(r, RETRY_DELAY))
+          return attemptPrepare(attempt + 1)
+        }
+
+        // All retries failed - show error
+        dbg('All retries failed, showing error')
+        setCardStatus('error')
       }
-
-      // Convert logo to base64
-      try {
-        const logoRes = await fetch('/school-logo.png')
-        const logoBlob = await logoRes.blob()
-        logoB64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(logoBlob)
-        })
-        dbg(`Logo base64 OK: ${Math.round(logoB64.length / 1024)} KB`)
-      } catch (e) { dbg(`Logo base64 failed: ${e}`) }
-
-      // CRITICAL: Preload images into Image objects BEFORE setting state
-      // This forces iOS Safari to decode the images into memory
-      dbg('Preloading images into Image objects...')
-      const preloadPromises: Promise<HTMLImageElement | null>[] = []
-
-      if (mainB64) {
-        preloadPromises.push(preloadImage(mainB64).catch(() => null))
-      } else {
-        preloadPromises.push(Promise.resolve(null))
-      }
-      if (logoB64) {
-        preloadPromises.push(preloadImage(logoB64).catch(() => null))
-      } else {
-        preloadPromises.push(Promise.resolve(null))
-      }
-      if (iconB64) {
-        preloadPromises.push(preloadImage(iconB64).catch(() => null))
-      } else {
-        preloadPromises.push(Promise.resolve(null))
-      }
-
-      const [mainImg, logoImg, iconImg] = await Promise.all(preloadPromises)
-      dbg(`Preload complete: main=${!!mainImg}, logo=${!!logoImg}, icon=${!!iconImg}`)
-
-      // Store preloaded Image objects in ref (ensures they stay in memory)
-      preloadedImagesRef.current = { mainImg, logoImg, iconImg }
-
-      // NOW set state - React will render, and images are already decoded
-      if (mainB64) setImageBase64(mainB64)
-      if (logoB64) setLogoBase64(logoB64)
-      if (iconB64) setIconBase64(iconB64)
-
-      dbg('Image preparation complete - images preloaded and state set')
-      // Note: toPng capture happens in separate useEffect after React renders with new state
-    } catch (err) {
-      console.error('Image preparation error:', err)
-      setCardStatus('error')
     }
+
+    await attemptPrepare()
   }, [displayImageUrl, resultImageUrl, r2Path, profile, dbg, preloadImage])
 
   // Phase 2: Generate card using canvas (bypasses html-to-image for iOS Safari)
@@ -471,8 +492,11 @@ function ResultPageContent() {
     const { mainImg, logoImg, iconImg } = preloadedImagesRef.current
     if (!mainImg || !logoImg || !iconImg) return
 
-    const generateAndUploadCard = async () => {
-      dbg('Preloaded images ready, generating card via canvas...')
+    const MAX_RETRIES = 3
+    const RETRY_DELAY = 1000
+
+    const generateAndUploadCard = async (attempt = 1): Promise<void> => {
+      dbg(`Card generation attempt ${attempt}/${MAX_RETRIES}`)
       dbg(`Image sizes: main=${mainImg.naturalWidth}x${mainImg.naturalHeight}, logo=${logoImg.naturalWidth}x${logoImg.naturalHeight}, icon=${iconImg.naturalWidth}x${iconImg.naturalHeight}`)
 
       try {
@@ -506,13 +530,19 @@ function ResultPageContent() {
           setCardStatus('ready')
           dbg('Card uploaded successfully')
         } else {
-          throw new Error('Upload failed')
+          throw new Error(`Upload failed: ${uploadResponse.status}`)
         }
       } catch (err) {
-        console.error('Card generation error:', err)
-        if (err instanceof Error) {
-          console.error('Error:', err.message)
+        console.error(`Card generation error (attempt ${attempt}):`, err)
+
+        if (attempt < MAX_RETRIES) {
+          dbg(`Retrying in ${RETRY_DELAY}ms...`)
+          await new Promise(r => setTimeout(r, RETRY_DELAY))
+          return generateAndUploadCard(attempt + 1)
         }
+
+        // All retries failed - show error
+        dbg('All retries failed, showing error')
         setCardStatus('error')
       }
     }
