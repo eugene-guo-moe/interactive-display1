@@ -115,45 +115,6 @@ function ResultPageContent() {
     return () => clearTimeout(timer)
   }, [resultImageUrl, photoData, router, isTestMode, hydrated])
 
-  // Convert image URL to base64 to avoid CORS issues with html-to-image
-  const convertImageToBase64 = useCallback(async (url: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-
-      const timeout = setTimeout(() => {
-        reject(new Error('Image load timeout'))
-      }, 15000) // 15 second timeout
-
-      img.onload = () => {
-        clearTimeout(timeout)
-        try {
-          const canvas = document.createElement('canvas')
-          canvas.width = img.naturalWidth
-          canvas.height = img.naturalHeight
-          const ctx = canvas.getContext('2d')
-          if (!ctx) {
-            reject(new Error('Could not get canvas context'))
-            return
-          }
-          ctx.drawImage(img, 0, 0)
-          const dataUrl = canvas.toDataURL('image/png')
-          console.log('Image converted to base64 successfully, size:', Math.round(dataUrl.length / 1024), 'KB')
-          resolve(dataUrl)
-        } catch (err) {
-          console.error('Canvas conversion error:', err)
-          reject(err)
-        }
-      }
-      img.onerror = (e) => {
-        clearTimeout(timeout)
-        console.error('Image load error for URL:', url, e)
-        reject(new Error('Failed to load image: ' + url))
-      }
-      img.src = url
-    })
-  }, [])
-
   // Generate card and upload to R2 when image is loaded
   const generateAndUploadCard = useCallback(async () => {
     console.log('generateAndUploadCard called', {
@@ -236,31 +197,73 @@ function ResultPageContent() {
         dbg(`Skip fetch: base64=${!!base64Img}, url=${!!imageUrlForCard}`)
       }
 
-      // Convert icon and logo to base64 for reliable card rendering
-      if (!iconBase64 && profile.icon) {
+      // Convert icon and logo to base64 using fetch (avoids canvas CORS issues on iOS Safari)
+      let iconB64 = iconBase64
+      let logoB64 = logoBase64
+
+      if (!iconB64 && profile.icon) {
         try {
-          const iconB64 = await convertImageToBase64(profile.icon)
+          const iconRes = await fetch(profile.icon)
+          const iconBlob = await iconRes.blob()
+          iconB64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(iconBlob)
+          })
           setIconBase64(iconB64)
+          dbg(`Icon base64 OK: ${Math.round(iconB64.length / 1024)} KB`)
         } catch (e) { dbg(`Icon base64 failed: ${e}`) }
       }
-      if (!logoBase64) {
+      if (!logoB64) {
         try {
-          const logoB64 = await convertImageToBase64('/school-logo.png')
+          const logoRes = await fetch('/school-logo.png')
+          const logoBlob = await logoRes.blob()
+          logoB64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(logoBlob)
+          })
           setLogoBase64(logoB64)
+          dbg(`Logo base64 OK: ${Math.round(logoB64.length / 1024)} KB`)
         } catch (e) { dbg(`Logo base64 failed: ${e}`) }
       }
 
       // Directly set img src on the DOM to avoid React state race condition
-      if (base64Img && cardRef.current) {
-        const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
-        if (imgEl) {
-          imgEl.src = base64Img
-          dbg('Set img src directly on DOM element')
-        } else {
-          dbg('WARNING: img element not found in card div')
+      if (cardRef.current) {
+        // Set main image
+        if (base64Img) {
+          const imgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
+          if (imgEl) {
+            imgEl.src = base64Img
+            dbg('Set main img src directly on DOM')
+          } else {
+            dbg('WARNING: main img element not found in card div')
+          }
+        }
+        // Set logo directly on DOM (using local var, not stale state)
+        if (logoB64) {
+          const logoEl = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
+          if (logoEl) {
+            logoEl.src = logoB64
+            dbg('Set logo src directly on DOM')
+          } else {
+            dbg('WARNING: logo element not found in card div')
+          }
+        }
+        // Set icon directly on DOM (using local var, not stale state)
+        if (iconB64) {
+          const iconEl = cardRef.current.querySelector('img[alt=""]') as HTMLImageElement
+          if (iconEl) {
+            iconEl.src = iconB64
+            dbg('Set icon src directly on DOM')
+          } else {
+            dbg('WARNING: icon element not found in card div')
+          }
         }
       } else {
-        dbg(`Skip DOM set: base64=${!!base64Img}, cardRef=${!!cardRef.current}`)
+        dbg(`Skip DOM set: cardRef=${!!cardRef.current}`)
       }
 
       // Wait for image to decode and React to settle
@@ -313,7 +316,7 @@ function ResultPageContent() {
       }
       setCardStatus('error')
     }
-  }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, convertImageToBase64, currentStyle, profile, dbg])
+  }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, currentStyle, profile, dbg])
 
   // Start card generation when image is loaded
   useEffect(() => {
