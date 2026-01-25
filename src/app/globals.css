@@ -300,7 +300,8 @@ button:focus-visible {
   padding: 2rem;
 }
 
-@media (max-width: 767px) and (orientation: landscape) {
+/* Show on phones in landscape - use max-height since landscape phones have short height */
+@media (max-height: 500px) and (orientation: landscape) {
   .landscape-overlay {
     display: flex;
   }
