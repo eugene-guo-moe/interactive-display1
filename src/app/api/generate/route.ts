@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { QuizAnswers, ProfileType } from '@/types/quiz'
 
-// Use Node.js runtime instead of Edge to allow longer timeout
-// Edge runtime has ~30s limit, but FAL.ai generation can take 60-75s
-export const runtime = 'nodejs'
-export const maxDuration = 120 // Allow up to 2 minutes for image generation
+export const runtime = 'edge'
 
 // Worker URL from environment variable
 const WORKER_URL = process.env.WORKER_URL || 'https://riversidesec.eugene-ff3.workers.dev'
