@@ -292,12 +292,26 @@ button:focus-visible {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: #0a0a0a;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem;
+}
+
+.rotate-phone-icon {
+  color: rgba(255, 255, 255, 0.7);
+  animation: rotatePhone 2s ease-in-out infinite;
+}
+
+@keyframes rotatePhone {
+  0%, 100% {
+    transform: rotate(-90deg);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
 }
 
 /* Show on phones in landscape - use max-height since landscape phones have short height */

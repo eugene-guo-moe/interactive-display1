@@ -42,15 +42,17 @@ export default function RootLayout({
       <body className="font-sans kiosk-container">
         {/* Landscape orientation overlay for phones */}
         <div className="landscape-overlay">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-            <line x1="12" y1="18" x2="12" y2="18.01" />
-          </svg>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', fontWeight: 500, textAlign: 'center' }}>
-            Please rotate your device to portrait mode
+          <div className="rotate-phone-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="2" />
+            </svg>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem', fontWeight: 500, textAlign: 'center' }}>
+            Please rotate your device
           </p>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', textAlign: 'center' }}>
-            This experience is best viewed vertically
+            This experience is best viewed in portrait mode
           </p>
         </div>
         <QuizProvider>
