@@ -62,9 +62,9 @@ function ResultPageContent() {
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
-  const [cardImagesReady, setCardImagesReady] = useState(false)
+  const [cardCaptured, setCardCaptured] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
-  const hasStartedCardGeneration = useRef(false)
+  const hasStartedImagePrep = useRef(false)
 
   const dbg = useCallback((msg: string) => { console.log('[CARD]', msg) }, [])
 
@@ -116,19 +116,19 @@ function ResultPageContent() {
     return () => clearTimeout(timer)
   }, [resultImageUrl, photoData, router, isTestMode, hydrated])
 
-  // Generate card and upload to R2 when image is loaded
-  const generateAndUploadCard = useCallback(async () => {
-    console.log('generateAndUploadCard called', {
+  // Phase 1: Prepare images (fetch and set state) - toPng happens in separate effect
+  const prepareCardImages = useCallback(async () => {
+    console.log('prepareCardImages called', {
       hasCardRef: !!cardRef.current,
       displayImageUrl: displayImageUrl?.substring(0, 50) + '...',
-      hasStarted: hasStartedCardGeneration.current
+      hasStarted: hasStartedImagePrep.current
     })
 
-    if (!cardRef.current || !displayImageUrl || hasStartedCardGeneration.current) return
-    hasStartedCardGeneration.current = true
+    if (!displayImageUrl || hasStartedImagePrep.current) return
+    hasStartedImagePrep.current = true
 
     setCardStatus('generating')
-    dbg('Card generation started')
+    dbg('Image preparation started')
     dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
     dbg(`r2Path: ${r2Path}`)
     dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
@@ -160,8 +160,7 @@ function ResultPageContent() {
       }
 
       // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
-      let base64Img = imageBase64
-      if (!base64Img && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
+      if (!imageBase64 && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
         const urlsToTry = [imageUrlForCard]
         if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
           urlsToTry.push(displayImageUrl)
@@ -175,14 +174,14 @@ function ResultPageContent() {
             if (imgResponse.ok) {
               const blob = await imgResponse.blob()
               dbg(`Blob: ${blob.size} bytes, type=${blob.type}`)
-              base64Img = await new Promise<string>((resolve, reject) => {
+              const base64Img = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader()
                 reader.onloadend = () => resolve(reader.result as string)
                 reader.onerror = reject
                 reader.readAsDataURL(blob)
               })
               setImageBase64(base64Img)
-              dbg(`Base64 OK: ${Math.round(base64Img.length / 1024)} KB`)
+              dbg(`Main image base64 OK: ${Math.round(base64Img.length / 1024)} KB`)
               break
             } else {
               dbg(`Fetch failed: ${imgResponse.status}`)
@@ -191,22 +190,14 @@ function ResultPageContent() {
             dbg(`Fetch error: ${convErr}`)
           }
         }
-        if (!base64Img) {
-          dbg('WARNING: All fetch attempts failed, card will have no photo')
-        }
-      } else {
-        dbg(`Skip fetch: base64=${!!base64Img}, url=${!!imageUrlForCard}`)
       }
 
-      // Convert icon and logo to base64 using fetch (avoids canvas CORS issues on iOS Safari)
-      let iconB64 = iconBase64
-      let logoB64 = logoBase64
-
-      if (!iconB64 && profile.icon) {
+      // Convert icon to base64
+      if (!iconBase64 && profile.icon) {
         try {
           const iconRes = await fetch(profile.icon)
           const iconBlob = await iconRes.blob()
-          iconB64 = await new Promise<string>((resolve, reject) => {
+          const iconB64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
             reader.onerror = reject
@@ -216,11 +207,13 @@ function ResultPageContent() {
           dbg(`Icon base64 OK: ${Math.round(iconB64.length / 1024)} KB`)
         } catch (e) { dbg(`Icon base64 failed: ${e}`) }
       }
-      if (!logoB64) {
+
+      // Convert logo to base64
+      if (!logoBase64) {
         try {
           const logoRes = await fetch('/school-logo.png')
           const logoBlob = await logoRes.blob()
-          logoB64 = await new Promise<string>((resolve, reject) => {
+          const logoB64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
             reader.onerror = reject
@@ -231,84 +224,85 @@ function ResultPageContent() {
         } catch (e) { dbg(`Logo base64 failed: ${e}`) }
       }
 
-      // Mark images as ready and let React re-render
-      dbg(`All images fetched: main=${!!base64Img}, logo=${!!logoB64}, icon=${!!iconB64}`)
-      setCardImagesReady(true)
-
-      // Wait for React to re-render with base64 images in state
-      // Use multiple frames to ensure DOM is fully updated
-      await new Promise(resolve => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setTimeout(resolve, 300)
-          })
-        })
-      })
-      dbg('Starting toPng capture...')
-
-      // Generate base card image - skip fonts to avoid CSP blocking external font fetch
-      const baseCardDataUrl = await toPng(cardRef.current, {
-        quality: 1,
-        pixelRatio: 2,
-        cacheBust: true,
-        skipFonts: true,
-        backgroundColor: '#0a0a0a',
-      })
-
-      console.log('Card generated successfully')
-      setCardDataUrl(baseCardDataUrl)
-      setCardStatus('uploading')
-
-      // Extract base64 data for upload
-      const base64Data = baseCardDataUrl.split(',')[1]
-      const cardPath = `cards/${profileType}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`
-
-      // Upload to R2 via worker
-      const uploadResponse = await fetch(`${WORKER_URL}/upload-card`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cardData: base64Data,
-          cardPath: cardPath,
-          profileType: profileType,
-        }),
-      })
-
-      if (uploadResponse.ok) {
-        const data = await uploadResponse.json()
-        setCardUrl(data.cardUrl)
-        setQrUrl(data.cardUrl)
-        setCardStatus('ready')
-      } else {
-        throw new Error('Upload failed')
-      }
+      dbg('Image preparation complete - waiting for React to render')
+      // Note: toPng capture happens in separate useEffect after React renders with new state
     } catch (err) {
-      console.error('Card generation error:', err)
-      // Log more details
-      if (err instanceof Error) {
-        console.error('Error name:', err.name)
-        console.error('Error message:', err.message)
-        console.error('Error stack:', err.stack)
-      }
+      console.error('Image preparation error:', err)
       setCardStatus('error')
     }
-  }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, currentStyle, profile, dbg])
+  }, [displayImageUrl, resultImageUrl, r2Path, imageBase64, iconBase64, logoBase64, profile, dbg])
 
-  // Start card generation when image is loaded
-  // Delay to ensure React has fully rendered the hidden card div
+  // Phase 2: Capture card AFTER React has rendered with base64 images
+  // This effect runs when all three base64 states are set
+  useEffect(() => {
+    // Only proceed when ALL images are ready and not already captured
+    if (!imageBase64 || !logoBase64 || !iconBase64) return
+    if (cardCaptured) return
+    if (!cardRef.current) return
+
+    const captureAndUploadCard = async () => {
+      dbg('All base64 images ready, starting capture...')
+
+      // Small delay to ensure browser has painted the images
+      await new Promise(r => setTimeout(r, 100))
+
+      try {
+        dbg('Calling toPng...')
+        const baseCardDataUrl = await toPng(cardRef.current!, {
+          quality: 1,
+          pixelRatio: 2,
+          cacheBust: true,
+          skipFonts: true,
+          backgroundColor: '#0a0a0a',
+        })
+
+        console.log('Card captured successfully')
+        setCardDataUrl(baseCardDataUrl)
+        setCardCaptured(true)
+        setCardStatus('uploading')
+
+        // Extract base64 data for upload
+        const base64Data = baseCardDataUrl.split(',')[1]
+        const cardPath = `cards/${profileType}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`
+
+        // Upload to R2 via worker
+        const uploadResponse = await fetch(`${WORKER_URL}/upload-card`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cardData: base64Data,
+            cardPath: cardPath,
+            profileType: profileType,
+          }),
+        })
+
+        if (uploadResponse.ok) {
+          const data = await uploadResponse.json()
+          setCardUrl(data.cardUrl)
+          setQrUrl(data.cardUrl)
+          setCardStatus('ready')
+          dbg('Card uploaded successfully')
+        } else {
+          throw new Error('Upload failed')
+        }
+      } catch (err) {
+        console.error('Card capture error:', err)
+        if (err instanceof Error) {
+          console.error('Error:', err.message)
+        }
+        setCardStatus('error')
+      }
+    }
+
+    captureAndUploadCard()
+  }, [imageBase64, logoBase64, iconBase64, cardCaptured, profileType, setQrUrl, dbg])
+
+  // Start image preparation when display image is loaded
   useEffect(() => {
     if (imageLoaded && displayImageUrl) {
-      // Use requestAnimationFrame + timeout to ensure DOM is fully painted
-      const startGeneration = () => {
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            generateAndUploadCard()
-          }, 100)
-        })
-      }
-      startGeneration()
+      prepareCardImages()
     }
-  }, [imageLoaded, displayImageUrl, generateAndUploadCard])
+  }, [imageLoaded, displayImageUrl, prepareCardImages])
 
   const handleStartOver = () => {
     router.push('/')
@@ -347,9 +341,10 @@ function ResultPageContent() {
   }
 
   const handleRetryCard = () => {
-    hasStartedCardGeneration.current = false
+    hasStartedImagePrep.current = false
+    setCardCaptured(false)
     setCardStatus('generating')
-    generateAndUploadCard()
+    prepareCardImages()
   }
 
   // Render QR section based on card status
