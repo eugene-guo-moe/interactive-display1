@@ -18,6 +18,135 @@
 
 import { AwsClient } from 'aws4fetch'
 
+/**
+ * Durable Object for FAL.ai concurrency limiting
+ * Ensures max 40 concurrent requests across all worker instances
+ * Queues excess requests and provides queue position feedback
+ */
+export class ConcurrencyLimiter {
+  private state: DurableObjectState
+  private activeRequests: number = 0
+  private waitingQueue: Array<{
+    resolve: (response: Response) => void
+    requestId: string
+  }> = []
+  private readonly maxConcurrent = 40
+  private readonly queueTimeout = 120000 // 2 minutes max wait
+
+  constructor(state: DurableObjectState) {
+    this.state = state
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url)
+
+    if (url.pathname === '/acquire') {
+      return this.acquire(request)
+    }
+
+    if (url.pathname === '/release') {
+      return this.release()
+    }
+
+    if (url.pathname === '/status') {
+      return new Response(JSON.stringify({
+        active: this.activeRequests,
+        queued: this.waitingQueue.length,
+        max: this.maxConcurrent,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    return new Response('Not found', { status: 404 })
+  }
+
+  private async acquire(request: Request): Promise<Response> {
+    const body = await request.json().catch(() => ({})) as { requestId?: string }
+    const requestId = body.requestId || crypto.randomUUID()
+
+    // If under limit, acquire immediately
+    if (this.activeRequests < this.maxConcurrent) {
+      this.activeRequests++
+      console.log(`[Limiter] Acquired slot. Active: ${this.activeRequests}/${this.maxConcurrent}`)
+      return new Response(JSON.stringify({
+        acquired: true,
+        position: 0,
+        activeRequests: this.activeRequests,
+        queueLength: this.waitingQueue.length,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // At capacity - queue this request
+    console.log(`[Limiter] At capacity (${this.activeRequests}). Queuing request ${requestId}. Queue size: ${this.waitingQueue.length + 1}`)
+
+    return new Promise((resolve) => {
+      const position = this.waitingQueue.length + 1
+
+      const timeoutId = setTimeout(() => {
+        // Remove from queue on timeout
+        const idx = this.waitingQueue.findIndex(w => w.requestId === requestId)
+        if (idx !== -1) {
+          this.waitingQueue.splice(idx, 1)
+          console.log(`[Limiter] Request ${requestId} timed out. Queue size: ${this.waitingQueue.length}`)
+          resolve(new Response(JSON.stringify({
+            acquired: false,
+            error: 'Queue timeout - service busy',
+            position: -1,
+          }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          }))
+        }
+      }, this.queueTimeout)
+
+      this.waitingQueue.push({
+        requestId,
+        resolve: (response: Response) => {
+          clearTimeout(timeoutId)
+          resolve(response)
+        },
+      })
+
+      // Immediately return queue position for frontend to display
+      // The actual acquire will happen when a slot opens
+      // For now, we need to wait - this is handled by the Promise
+    })
+  }
+
+  private async release(): Promise<Response> {
+    this.activeRequests = Math.max(0, this.activeRequests - 1)
+    console.log(`[Limiter] Released slot. Active: ${this.activeRequests}/${this.maxConcurrent}`)
+
+    // Process next in queue if any
+    if (this.waitingQueue.length > 0 && this.activeRequests < this.maxConcurrent) {
+      const next = this.waitingQueue.shift()
+      if (next) {
+        this.activeRequests++
+        console.log(`[Limiter] Dequeued request ${next.requestId}. Active: ${this.activeRequests}, Queue: ${this.waitingQueue.length}`)
+        next.resolve(new Response(JSON.stringify({
+          acquired: true,
+          position: 0,
+          activeRequests: this.activeRequests,
+          queueLength: this.waitingQueue.length,
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+        }))
+      }
+    }
+
+    return new Response(JSON.stringify({
+      released: true,
+      activeRequests: this.activeRequests,
+      queueLength: this.waitingQueue.length,
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+}
+
 export interface Env {
   FAL_KEY: string
   AWS_ACCESS_KEY_ID: string
@@ -27,6 +156,7 @@ export interface Env {
   PUBLIC_URL: string // e.g., "https://images.yoursite.com"
   API_KEY?: string // Optional API key for authentication
   ALLOWED_ORIGINS?: string // Comma-separated list of allowed origins
+  CONCURRENCY_LIMITER: DurableObjectNamespace // For FAL.ai rate limiting
 }
 
 // Valid profile types for image generation
@@ -482,6 +612,37 @@ export default {
       })
     }
 
+    // Queue status endpoint - check current FAL.ai capacity (no auth required)
+    if (url.pathname === '/queue-status') {
+      try {
+        const limiter = env.CONCURRENCY_LIMITER.get(
+          env.CONCURRENCY_LIMITER.idFromName('global')
+        )
+        const statusResponse = await limiter.fetch(new Request('https://limiter/status'))
+        const status = await statusResponse.json() as {
+          active: number
+          queued: number
+          max: number
+        }
+
+        return new Response(JSON.stringify({
+          activeRequests: status.active,
+          queuedRequests: status.queued,
+          maxConcurrent: status.max,
+          available: status.max - status.active,
+        }), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (err) {
+        return new Response(JSON.stringify({
+          error: 'Failed to get queue status',
+        }), {
+          status: 500,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     // Get client IP for rate limiting - only trust Cloudflare's header
     // CF-Connecting-IP is set by Cloudflare and cannot be spoofed by clients
     const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown'
@@ -671,17 +832,48 @@ export default {
         })
       }
 
-      // Rate limiting
-      const rateLimit = checkRateLimit(clientIP)
-      if (!rateLimit.allowed) {
-        return new Response(JSON.stringify({ error: 'Too many requests' }), {
-          status: 429,
-          headers: {
-            ...allHeaders,
-            'Content-Type': 'application/json',
-            'Retry-After': String(rateLimit.retryAfter),
-          },
+      // Acquire concurrency slot (max 40 concurrent FAL.ai requests)
+      const limiter = env.CONCURRENCY_LIMITER.get(
+        env.CONCURRENCY_LIMITER.idFromName('global')
+      )
+      const requestId = crypto.randomUUID()
+
+      let acquireResponse: Response
+      try {
+        acquireResponse = await limiter.fetch(
+          new Request('https://limiter/acquire', {
+            method: 'POST',
+            body: JSON.stringify({ requestId }),
+          })
+        )
+      } catch (err) {
+        console.error('[Generate] Limiter error:', err)
+        return new Response(JSON.stringify({ error: 'Service temporarily unavailable' }), {
+          status: 503,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
         })
+      }
+
+      const acquireResult = await acquireResponse.json() as {
+        acquired: boolean
+        position: number
+        error?: string
+        queueLength?: number
+      }
+
+      if (!acquireResult.acquired) {
+        return new Response(JSON.stringify({
+          error: acquireResult.error || 'Service busy',
+          queuePosition: acquireResult.position,
+        }), {
+          status: 503,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Log queue info if request was queued
+      if (acquireResult.position > 0) {
+        console.log(`[Generate] Request ${requestId} was queued at position ${acquireResult.position}`)
       }
 
       try {
@@ -798,10 +990,17 @@ export default {
 
         console.log(`[${imageId}] Total response time: ${Date.now() - startTime}ms`)
 
+        // Release concurrency slot (don't await - use waitUntil for non-blocking)
+        ctx.waitUntil(limiter.fetch(new Request('https://limiter/release', { method: 'POST' })))
+
         return new Response(JSON.stringify(response), {
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
         })
-      } catch {
+      } catch (err) {
+        // Release concurrency slot on error
+        ctx.waitUntil(limiter.fetch(new Request('https://limiter/release', { method: 'POST' })))
+
+        console.error('[Generate] Error:', err)
         return new Response(
           JSON.stringify({ error: 'Image generation failed' }),
           {

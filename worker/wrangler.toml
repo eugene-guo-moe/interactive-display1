@@ -19,6 +19,15 @@ ALLOWED_ORIGINS = "https://interactive-display.vercel.app,https://riversidesec.v
 binding = "IMAGES_BUCKET"
 bucket_name = "history-future-images"
 
+# Durable Object for FAL.ai concurrency limiting (max 40 concurrent)
+[[durable_objects.bindings]]
+name = "CONCURRENCY_LIMITER"
+class_name = "ConcurrencyLimiter"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ConcurrencyLimiter"]
+
 # Development settings
 [dev]
 port = 8787
