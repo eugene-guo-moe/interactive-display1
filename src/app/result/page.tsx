@@ -267,13 +267,38 @@ function ResultPageContent() {
         })
       }
 
-      // Set images on DOM and wait for them to load
-      if (cardRef.current) {
-        const mainImgEl = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
-        const logoEl = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
-        const iconEl = cardRef.current.querySelector('img[alt=""]') as HTMLImageElement
+      // Wait for card div to fully render with all img elements
+      const waitForElements = async (): Promise<{main: HTMLImageElement | null, logo: HTMLImageElement | null, icon: HTMLImageElement | null}> => {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          if (!cardRef.current) {
+            dbg(`Attempt ${attempt + 1}: cardRef not ready`)
+            await new Promise(r => setTimeout(r, 200))
+            continue
+          }
+          const main = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
+          const logo = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
+          const icon = cardRef.current.querySelector('img[alt=""]') as HTMLImageElement
 
-        dbg(`Found elements: main=${!!mainImgEl}, logo=${!!logoEl}, icon=${!!iconEl}`)
+          if (main && logo && icon) {
+            dbg(`Found all elements on attempt ${attempt + 1}`)
+            return { main, logo, icon }
+          }
+          dbg(`Attempt ${attempt + 1}: main=${!!main}, logo=${!!logo}, icon=${!!icon}`)
+          await new Promise(r => setTimeout(r, 200))
+        }
+        dbg('WARNING: Could not find all elements after 10 attempts')
+        return {
+          main: cardRef.current?.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement,
+          logo: cardRef.current?.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement,
+          icon: cardRef.current?.querySelector('img[alt=""]') as HTMLImageElement,
+        }
+      }
+
+      // Set images on DOM and wait for them to load
+      const { main: mainImgEl, logo: logoEl, icon: iconEl } = await waitForElements()
+      dbg(`Found elements: main=${!!mainImgEl}, logo=${!!logoEl}, icon=${!!iconEl}`)
+
+      if (mainImgEl || logoEl || iconEl) {
 
         // Load all images in parallel and wait for all
         const loadResults = await Promise.all([
