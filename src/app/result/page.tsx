@@ -124,22 +124,11 @@ function ResultPageContent() {
       hasStarted: hasStartedCardGeneration.current
     })
 
-    if (!displayImageUrl || hasStartedCardGeneration.current) return
+    if (!cardRef.current || !displayImageUrl || hasStartedCardGeneration.current) return
     hasStartedCardGeneration.current = true
 
     setCardStatus('generating')
     dbg('Card generation started')
-
-    // Wait for React to fully render the hidden card div on first load
-    // This is critical - on first load the DOM may not be ready immediately
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    dbg('Initial render delay complete')
-
-    if (!cardRef.current) {
-      dbg('ERROR: cardRef still not ready after delay')
-      setCardStatus('error')
-      return
-    }
     dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
     dbg(`r2Path: ${r2Path}`)
     dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
@@ -242,89 +231,19 @@ function ResultPageContent() {
         } catch (e) { dbg(`Logo base64 failed: ${e}`) }
       }
 
-      // Helper to set image src and wait for it to load
-      const setImageAndWait = async (el: HTMLImageElement | null, src: string, name: string): Promise<boolean> => {
-        if (!el || !src) {
-          dbg(`Skip ${name}: el=${!!el}, src=${!!src}`)
-          return false
-        }
-        return new Promise((resolve) => {
-          const onLoad = () => {
-            dbg(`${name} loaded successfully`)
-            resolve(true)
-          }
-          const onError = () => {
-            dbg(`WARNING: ${name} failed to load`)
-            resolve(false)
-          }
-          // If already has this src and is complete, skip
-          if (el.src === src && el.complete && el.naturalWidth > 0) {
-            dbg(`${name} already loaded`)
-            resolve(true)
-            return
-          }
-          el.onload = onLoad
-          el.onerror = onError
-          el.src = src
-          // Fallback timeout in case events don't fire
-          setTimeout(() => {
-            if (el.complete) {
-              dbg(`${name} complete via timeout`)
-              resolve(true)
-            } else {
-              dbg(`WARNING: ${name} timeout`)
-              resolve(false)
-            }
-          }, 3000)
+      // Mark images as ready and let React re-render
+      dbg(`All images fetched: main=${!!base64Img}, logo=${!!logoB64}, icon=${!!iconB64}`)
+      setCardImagesReady(true)
+
+      // Wait for React to re-render with base64 images in state
+      // Use multiple frames to ensure DOM is fully updated
+      await new Promise(resolve => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setTimeout(resolve, 300)
+          })
         })
-      }
-
-      // Wait for card div to fully render with all img elements
-      const waitForElements = async (): Promise<{main: HTMLImageElement | null, logo: HTMLImageElement | null, icon: HTMLImageElement | null}> => {
-        for (let attempt = 0; attempt < 10; attempt++) {
-          if (!cardRef.current) {
-            dbg(`Attempt ${attempt + 1}: cardRef not ready`)
-            await new Promise(r => setTimeout(r, 200))
-            continue
-          }
-          const main = cardRef.current.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement
-          const logo = cardRef.current.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement
-          const icon = cardRef.current.querySelector('img[alt=""]') as HTMLImageElement
-
-          if (main && logo && icon) {
-            dbg(`Found all elements on attempt ${attempt + 1}`)
-            return { main, logo, icon }
-          }
-          dbg(`Attempt ${attempt + 1}: main=${!!main}, logo=${!!logo}, icon=${!!icon}`)
-          await new Promise(r => setTimeout(r, 200))
-        }
-        dbg('WARNING: Could not find all elements after 10 attempts')
-        return {
-          main: cardRef.current?.querySelector('img[alt="Your Singapore moment"]') as HTMLImageElement,
-          logo: cardRef.current?.querySelector('img[alt="Riverside Secondary School"]') as HTMLImageElement,
-          icon: cardRef.current?.querySelector('img[alt=""]') as HTMLImageElement,
-        }
-      }
-
-      // Set images on DOM and wait for them to load
-      const { main: mainImgEl, logo: logoEl, icon: iconEl } = await waitForElements()
-      dbg(`Found elements: main=${!!mainImgEl}, logo=${!!logoEl}, icon=${!!iconEl}`)
-
-      if (mainImgEl || logoEl || iconEl) {
-
-        // Load all images in parallel and wait for all
-        const loadResults = await Promise.all([
-          setImageAndWait(mainImgEl, base64Img || '', 'main image'),
-          setImageAndWait(logoEl, logoB64 || '', 'logo'),
-          setImageAndWait(iconEl, iconB64 || '', 'icon'),
-        ])
-        dbg(`Load results: main=${loadResults[0]}, logo=${loadResults[1]}, icon=${loadResults[2]}`)
-      } else {
-        dbg(`Skip DOM set: cardRef=${!!cardRef.current}`)
-      }
-
-      // Additional settle time for rendering
-      await new Promise(resolve => setTimeout(resolve, 500))
+      })
       dbg('Starting toPng capture...')
 
       // Generate base card image - skip fonts to avoid CSP blocking external font fetch
