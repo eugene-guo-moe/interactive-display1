@@ -65,6 +65,12 @@ function ResultPageContent() {
   const [cardCaptured, setCardCaptured] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedImagePrep = useRef(false)
+  // Store preloaded Image objects to ensure iOS Safari has decoded them
+  const preloadedImagesRef = useRef<{
+    mainImg: HTMLImageElement | null
+    logoImg: HTMLImageElement | null
+    iconImg: HTMLImageElement | null
+  }>({ mainImg: null, logoImg: null, iconImg: null })
 
   const dbg = useCallback((msg: string) => { console.log('[CARD]', msg) }, [])
 
@@ -116,7 +122,27 @@ function ResultPageContent() {
     return () => clearTimeout(timer)
   }, [resultImageUrl, photoData, router, isTestMode, hydrated])
 
-  // Phase 1: Prepare images (fetch and set state) - toPng happens in separate effect
+  // Helper to preload an image into an Image object (forces iOS Safari to decode)
+  const preloadImage = useCallback((src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        dbg(`Preloaded image: ${src.substring(0, 50)}... (${img.naturalWidth}x${img.naturalHeight})`)
+        resolve(img)
+      }
+      img.onerror = (e) => {
+        dbg(`Preload failed: ${src.substring(0, 50)}...`)
+        reject(e)
+      }
+      // For data URLs, crossOrigin is not needed. For URLs, set it.
+      if (!src.startsWith('data:')) {
+        img.crossOrigin = 'anonymous'
+      }
+      img.src = src
+    })
+  }, [dbg])
+
+  // Phase 1: Prepare images (fetch, preload into Image objects, then set state)
   const prepareCardImages = useCallback(async () => {
     console.log('prepareCardImages called', {
       hasCardRef: !!cardRef.current,
@@ -159,8 +185,13 @@ function ResultPageContent() {
         dbg(`Skipped R2 upload: resultImageUrl=${!!resultImageUrl}, r2Path=${!!r2Path}`)
       }
 
+      // Fetch all images as base64 first
+      let mainB64: string | null = null
+      let iconB64: string | null = null
+      let logoB64: string | null = null
+
       // Convert main image to base64 using fetch (avoids canvas CORS issues on iOS Safari)
-      if (!imageBase64 && imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
+      if (imageUrlForCard && !imageUrlForCard.startsWith('data:')) {
         const urlsToTry = [imageUrlForCard]
         if (imageUrlForCard !== displayImageUrl && displayImageUrl && !displayImageUrl.startsWith('data:')) {
           urlsToTry.push(displayImageUrl)
@@ -174,14 +205,13 @@ function ResultPageContent() {
             if (imgResponse.ok) {
               const blob = await imgResponse.blob()
               dbg(`Blob: ${blob.size} bytes, type=${blob.type}`)
-              const base64Img = await new Promise<string>((resolve, reject) => {
+              mainB64 = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader()
                 reader.onloadend = () => resolve(reader.result as string)
                 reader.onerror = reject
                 reader.readAsDataURL(blob)
               })
-              setImageBase64(base64Img)
-              dbg(`Main image base64 OK: ${Math.round(base64Img.length / 1024)} KB`)
+              dbg(`Main image base64 OK: ${Math.round(mainB64.length / 1024)} KB`)
               break
             } else {
               dbg(`Fetch failed: ${imgResponse.status}`)
@@ -190,47 +220,77 @@ function ResultPageContent() {
             dbg(`Fetch error: ${convErr}`)
           }
         }
+      } else if (imageUrlForCard?.startsWith('data:')) {
+        mainB64 = imageUrlForCard
       }
 
       // Convert icon to base64
-      if (!iconBase64 && profile.icon) {
+      if (profile.icon) {
         try {
           const iconRes = await fetch(profile.icon)
           const iconBlob = await iconRes.blob()
-          const iconB64 = await new Promise<string>((resolve, reject) => {
+          iconB64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
             reader.onerror = reject
             reader.readAsDataURL(iconBlob)
           })
-          setIconBase64(iconB64)
           dbg(`Icon base64 OK: ${Math.round(iconB64.length / 1024)} KB`)
         } catch (e) { dbg(`Icon base64 failed: ${e}`) }
       }
 
       // Convert logo to base64
-      if (!logoBase64) {
-        try {
-          const logoRes = await fetch('/school-logo.png')
-          const logoBlob = await logoRes.blob()
-          const logoB64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(logoBlob)
-          })
-          setLogoBase64(logoB64)
-          dbg(`Logo base64 OK: ${Math.round(logoB64.length / 1024)} KB`)
-        } catch (e) { dbg(`Logo base64 failed: ${e}`) }
+      try {
+        const logoRes = await fetch('/school-logo.png')
+        const logoBlob = await logoRes.blob()
+        logoB64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(logoBlob)
+        })
+        dbg(`Logo base64 OK: ${Math.round(logoB64.length / 1024)} KB`)
+      } catch (e) { dbg(`Logo base64 failed: ${e}`) }
+
+      // CRITICAL: Preload images into Image objects BEFORE setting state
+      // This forces iOS Safari to decode the images into memory
+      dbg('Preloading images into Image objects...')
+      const preloadPromises: Promise<HTMLImageElement | null>[] = []
+
+      if (mainB64) {
+        preloadPromises.push(preloadImage(mainB64).catch(() => null))
+      } else {
+        preloadPromises.push(Promise.resolve(null))
+      }
+      if (logoB64) {
+        preloadPromises.push(preloadImage(logoB64).catch(() => null))
+      } else {
+        preloadPromises.push(Promise.resolve(null))
+      }
+      if (iconB64) {
+        preloadPromises.push(preloadImage(iconB64).catch(() => null))
+      } else {
+        preloadPromises.push(Promise.resolve(null))
       }
 
-      dbg('Image preparation complete - waiting for React to render')
+      const [mainImg, logoImg, iconImg] = await Promise.all(preloadPromises)
+      dbg(`Preload complete: main=${!!mainImg}, logo=${!!logoImg}, icon=${!!iconImg}`)
+
+      // Store preloaded Image objects in ref (ensures they stay in memory)
+      preloadedImagesRef.current = { mainImg, logoImg, iconImg }
+
+      // NOW set state - React will render, and images are already decoded
+      if (mainB64) setImageBase64(mainB64)
+      if (logoB64) setLogoBase64(logoB64)
+      if (iconB64) setIconBase64(iconB64)
+
+      dbg('Image preparation complete - images preloaded and state set')
       // Note: toPng capture happens in separate useEffect after React renders with new state
     } catch (err) {
       console.error('Image preparation error:', err)
       setCardStatus('error')
     }
-  }, [displayImageUrl, resultImageUrl, r2Path, imageBase64, iconBase64, logoBase64, profile, dbg])
+  }, [displayImageUrl, resultImageUrl, r2Path, profile, dbg, preloadImage])
 
   // Phase 2: Capture card AFTER React has rendered with base64 images
   // This effect runs when all three base64 states are set
@@ -241,31 +301,34 @@ function ResultPageContent() {
     if (!cardRef.current) return
 
     const captureAndUploadCard = async () => {
-      dbg('All base64 images in state, waiting for browser to decode...')
+      dbg('All base64 images in state, checking preloaded images...')
 
-      // Wait for ALL images in the hidden card to be decoded by the browser
-      // This is critical - React may have set src but browser hasn't decoded yet
+      // Verify preloaded images are available (they should be, since we preloaded before setting state)
+      const { mainImg, logoImg, iconImg } = preloadedImagesRef.current
+      dbg(`Preloaded refs: main=${!!mainImg}, logo=${!!logoImg}, icon=${!!iconImg}`)
+
+      // Also wait for DOM images to be ready as a fallback
       const imgs = cardRef.current!.querySelectorAll('img')
-      dbg(`Found ${imgs.length} images to decode`)
+      dbg(`Found ${imgs.length} DOM images to verify`)
 
       await Promise.all(
         Array.from(imgs).map(async (img, i) => {
           if (img.complete && img.naturalWidth > 0) {
-            dbg(`Image ${i} already complete`)
+            dbg(`DOM Image ${i} already complete`)
             return
           }
           try {
             await img.decode()
-            dbg(`Image ${i} decoded successfully`)
+            dbg(`DOM Image ${i} decoded successfully`)
           } catch (e) {
             // decode() can fail for some images, fall back to waiting
-            dbg(`Image ${i} decode failed, waiting...`)
+            dbg(`DOM Image ${i} decode failed, waiting...`)
             await new Promise(r => setTimeout(r, 200))
           }
         })
       )
 
-      dbg('All images decoded, starting capture...')
+      dbg('All images verified, starting capture...')
 
       try {
         dbg('Calling toPng...')
@@ -363,6 +426,7 @@ function ResultPageContent() {
 
   const handleRetryCard = () => {
     hasStartedImagePrep.current = false
+    preloadedImagesRef.current = { mainImg: null, logoImg: null, iconImg: null }
     setCardCaptured(false)
     setCardStatus('generating')
     prepareCardImages()
@@ -794,8 +858,9 @@ function ResultPageContent() {
         ref={cardRef}
         style={{
           position: 'fixed',
-          left: '-9999px',  // Off-screen instead of z-index (mobile Safari may not decode behind-screen images)
+          left: 0,
           top: 0,
+          zIndex: -9999,  // Behind everything (images preloaded in JS, so Safari decode issue is bypassed)
           width: '540px',
           height: '960px',
           background: `radial-gradient(circle at 50% 35%, ${currentStyle.color}35 0%, ${currentStyle.color}10 30%, transparent 60%), #0a0a0a`,
