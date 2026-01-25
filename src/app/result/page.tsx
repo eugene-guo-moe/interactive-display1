@@ -62,6 +62,7 @@ function ResultPageContent() {
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
+  const [cardImagesReady, setCardImagesReady] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const hasStartedCardGeneration = useRef(false)
 
@@ -123,11 +124,22 @@ function ResultPageContent() {
       hasStarted: hasStartedCardGeneration.current
     })
 
-    if (!cardRef.current || !displayImageUrl || hasStartedCardGeneration.current) return
+    if (!displayImageUrl || hasStartedCardGeneration.current) return
     hasStartedCardGeneration.current = true
 
     setCardStatus('generating')
     dbg('Card generation started')
+
+    // Wait for React to fully render the hidden card div on first load
+    // This is critical - on first load the DOM may not be ready immediately
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    dbg('Initial render delay complete')
+
+    if (!cardRef.current) {
+      dbg('ERROR: cardRef still not ready after delay')
+      setCardStatus('error')
+      return
+    }
     dbg(`resultImageUrl: ${resultImageUrl?.substring(0, 50)}...`)
     dbg(`r2Path: ${r2Path}`)
     dbg(`displayImageUrl: ${displayImageUrl?.substring(0, 50)}...`)
@@ -364,9 +376,18 @@ function ResultPageContent() {
   }, [displayImageUrl, resultImageUrl, r2Path, profileType, setQrUrl, imageBase64, iconBase64, logoBase64, currentStyle, profile, dbg])
 
   // Start card generation when image is loaded
+  // Delay to ensure React has fully rendered the hidden card div
   useEffect(() => {
     if (imageLoaded && displayImageUrl) {
-      generateAndUploadCard()
+      // Use requestAnimationFrame + timeout to ensure DOM is fully painted
+      const startGeneration = () => {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            generateAndUploadCard()
+          }, 100)
+        })
+      }
+      startGeneration()
     }
   }, [imageLoaded, displayImageUrl, generateAndUploadCard])
 
