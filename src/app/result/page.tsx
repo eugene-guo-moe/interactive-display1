@@ -196,15 +196,15 @@ function generateCardCanvas(
   ctx.textBaseline = 'top'
   const descY = wrapText(profile.description, W - 60, 22, 725)
 
-  // 9. Strength
+  // 9. Strength (same padding as description)
   ctx.fillStyle = color
   ctx.font = '600 15px system-ui, -apple-system, sans-serif'
-  ctx.fillText(`Your strength: ${profile.strength}`, W / 2, descY + 30)
+  wrapText(`Your strength: ${profile.strength}`, W - 60, 22, descY + 30)
 
   // 10. Footer
   ctx.fillStyle = 'rgba(255,255,255,0.35)'
   ctx.font = '10px system-ui, -apple-system, sans-serif'
-  ctx.fillText('Powered by AI • Made with love in Singapore', W / 2, H - 24)
+  ctx.fillText('Powered by AI • Made with love in Singapore', W / 2, H - 36)
 
   return canvas.toDataURL('image/png')
 }
