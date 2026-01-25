@@ -31,7 +31,7 @@ export class ConcurrencyLimiter {
     requestId: string
   }> = []
   private readonly maxConcurrent = 40
-  private readonly queueTimeout = 300000 // 5 minutes max wait
+  private readonly queueTimeout = 120000 // 2 minutes max wait
 
   constructor(state: DurableObjectState) {
     this.state = state
