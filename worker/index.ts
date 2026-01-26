@@ -255,8 +255,8 @@ function getAllowedOrigins(env: Env): string[] {
   }
   // Default allowed origins - update these for your deployment
   return [
-    'https://interactive-display1.vercel.app',
     'https://interactive-display.pages.dev',
+    'https://interactive-display1.vercel.app',
     'http://localhost:3000',
     'http://localhost:3001',
   ]

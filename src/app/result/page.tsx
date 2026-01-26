@@ -35,7 +35,7 @@ const profileStyles: Record<ProfileType, { image: string; color: string }> = {
 }
 
 // Worker URL for R2 upload
-const WORKER_URL = 'https://riversidesec.eugene-ff3.workers.dev'
+const WORKER_URL = 'https://interactive-display.eugene-ff3.workers.dev'
 
 // Canvas-based card generation (bypasses html-to-image for iOS Safari compatibility)
 function generateCardCanvas(

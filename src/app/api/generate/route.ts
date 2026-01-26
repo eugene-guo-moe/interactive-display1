@@ -4,7 +4,7 @@ import type { QuizAnswers, ProfileType } from '@/types/quiz'
 export const runtime = 'edge'
 
 // Worker URL from environment variable
-const WORKER_URL = process.env.WORKER_URL || 'https://riversidesec.eugene-ff3.workers.dev'
+const WORKER_URL = process.env.WORKER_URL || 'https://interactive-display.eugene-ff3.workers.dev'
 const WORKER_API_KEY = process.env.WORKER_API_KEY || ''
 
 // Security constants
