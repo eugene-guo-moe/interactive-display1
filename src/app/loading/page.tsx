@@ -17,10 +17,10 @@ const stepDurations = [4000, 12000, 10000, 4000] // Total: 30 seconds
 // Background images based on profile type
 const backgroundImages: Record<string, string> = {
   guardian: 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
-  builder: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
+  steward: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
   shaper: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
-  'guardian-builder': 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
-  'builder-shaper': 'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=1920&q=80',
+  'guardian-steward': 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
+  'steward-shaper': 'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=1920&q=80',
   'adaptive-guardian': 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
 }
 
@@ -45,7 +45,7 @@ export default function LoadingPage() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0)
 
   const profileType = getProfileType()
-  const backgroundImage = backgroundImages[profileType] || backgroundImages.builder
+  const backgroundImage = backgroundImages[profileType] || backgroundImages.steward
 
   // Shuffle questions on mount
   useEffect(() => {

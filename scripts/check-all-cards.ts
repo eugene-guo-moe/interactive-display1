@@ -20,7 +20,7 @@ async function checkAllCards() {
       }
     })
 
-    const testUrl = `https://riversidesec.pages.dev/result?testImage=https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png&testProfile=${profile}`
+    const testUrl = `https://interactive-display.pages.dev/result?testImage=https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png&testProfile=${profile}`
     await page.goto(testUrl)
 
     for (let i = 0; i < 30; i++) {

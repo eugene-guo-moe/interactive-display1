@@ -32,7 +32,7 @@ async function testProductionResult() {
 
   try {
     // Test with test mode URL on production
-    const testUrl = 'https://riversidesec.pages.dev/result?testImage=https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png&testProfile=builder'
+    const testUrl = 'https://interactive-display.pages.dev/result?testImage=https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png&testProfile=builder'
 
     console.log('1. Testing result page with test mode...')
     console.log(`   URL: ${testUrl}`)

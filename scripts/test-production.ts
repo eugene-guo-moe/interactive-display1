@@ -3,7 +3,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 
 async function testProduction() {
-  console.log('=== Production Flow Test (riversidesec.pages.dev) ===\n')
+  console.log('=== Production Flow Test (interactive-display.pages.dev) ===\n')
 
   const outputDir = path.join(process.cwd(), 'scripts/production-test')
   if (!fs.existsSync(outputDir)) {
@@ -51,7 +51,7 @@ async function testProduction() {
 
   try {
     console.log('1. Loading production site...')
-    await page.goto('https://riversidesec.pages.dev')
+    await page.goto('https://interactive-display.pages.dev')
     await page.waitForTimeout(2000)
     await page.screenshot({ path: path.join(outputDir, '01-home.png') })
     console.log('   Screenshot: 01-home.png')

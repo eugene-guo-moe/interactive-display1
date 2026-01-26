@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
 
   // Test 1: Welcome Page
   console.log('1️⃣ Testing Welcome Page...');
-  await page.goto('https://history-vs-future.pages.dev');
+  await page.goto('https://interactive-display.pages.dev');
   await page.waitForLoadState('networkidle');
 
   const title = await page.title();
@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
 
   // Test 2: Question 1
   console.log('\n2️⃣ Testing Question 1...');
-  await page.goto('https://history-vs-future.pages.dev/question/1');
+  await page.goto('https://interactive-display.pages.dev/question/1');
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2000); // Wait for hydration
 
@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
 
   // Test 3: Question 2
   console.log('\n3️⃣ Testing Question 2...');
-  await page.goto('https://history-vs-future.pages.dev/question/2');
+  await page.goto('https://interactive-display.pages.dev/question/2');
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2000);
 
@@ -41,7 +41,7 @@ const { chromium } = require('playwright');
 
   // Test 4: Question 3
   console.log('\n4️⃣ Testing Question 3...');
-  await page.goto('https://history-vs-future.pages.dev/question/3');
+  await page.goto('https://interactive-display.pages.dev/question/3');
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2000);
 
@@ -52,7 +52,7 @@ const { chromium } = require('playwright');
 
   // Test 5: Full flow simulation
   console.log('\n5️⃣ Testing full navigation flow...');
-  await page.goto('https://history-vs-future.pages.dev');
+  await page.goto('https://interactive-display.pages.dev');
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1000);
 
@@ -83,7 +83,7 @@ const { chromium } = require('playwright');
   console.log(`   After Q3: ${page.url().includes('camera') ? '✅ Camera' : '❌'}`);
 
   console.log('\n✨ All tests completed!');
-  console.log('📱 Live at: https://history-vs-future.pages.dev');
+  console.log('📱 Live at: https://interactive-display.pages.dev');
 
   await browser.close();
 })();

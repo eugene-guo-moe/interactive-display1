@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 
-const BASE_URL = 'https://riversidesec.pages.dev'
+const BASE_URL = 'https://interactive-display.pages.dev'
 
 async function testManual() {
   console.log('Launching browser...')

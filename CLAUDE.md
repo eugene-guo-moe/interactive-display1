@@ -13,7 +13,7 @@ An interactive kiosk PWA for Singapore schools where users answer 3 MCQs, take a
 
 ## Project Structure
 ```
-/interactive-display
+/interactive-display1
 ├── src/
 │   ├── app/                    # Next.js App Router pages
 │   │   ├── page.tsx           # Welcome screen

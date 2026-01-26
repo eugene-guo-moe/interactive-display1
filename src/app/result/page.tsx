@@ -12,7 +12,7 @@ const profileStyles: Record<ProfileType, { image: string; color: string }> = {
     image: 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
     color: '#F59E0B', // Amber
   },
-  builder: {
+  steward: {
     image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1920&q=80',
     color: '#10B981', // Emerald
   },
@@ -20,11 +20,11 @@ const profileStyles: Record<ProfileType, { image: string; color: string }> = {
     image: 'https://images.unsplash.com/photo-1519608220182-b0ee9d0f54d6?w=1920&q=80',
     color: '#6366F1', // Indigo
   },
-  'guardian-builder': {
+  'guardian-steward': {
     image: 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=1920&q=80',
     color: '#F59E0B', // Amber
   },
-  'builder-shaper': {
+  'steward-shaper': {
     image: 'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=1920&q=80',
     color: '#14B8A6', // Teal
   },
@@ -214,10 +214,10 @@ type CardStatus = 'generating' | 'uploading' | 'ready' | 'error'
 // Test mode profiles for testing different profile types
 const testProfiles: Record<string, ProfileType> = {
   guardian: 'guardian',
-  builder: 'builder',
+  steward: 'steward',
   shaper: 'shaper',
-  'guardian-builder': 'guardian-builder',
-  'builder-shaper': 'builder-shaper',
+  'guardian-steward': 'guardian-steward',
+  'steward-shaper': 'steward-shaper',
   'adaptive-guardian': 'adaptive-guardian',
 }
 
@@ -259,7 +259,7 @@ function ResultPageContent() {
   const profileType = isTestMode && testProfile && testProfiles[testProfile]
     ? testProfile
     : getProfileType()
-  const currentStyle = profileStyles[profileType] || profileStyles.builder
+  const currentStyle = profileStyles[profileType] || profileStyles.steward
 
   // Use FAL.ai URL for display (fast CDN), or test image in test mode
   const displayImageUrl = isTestMode ? testImage : (resultImageUrl || photoData)
@@ -274,7 +274,7 @@ function ResultPageContent() {
   // QR code shows card view page (with save button) when ready, otherwise placeholder
   const qrValue = cardUrl
     ? cardUrl.replace('/cards/', '/view/cards/')
-    : 'https://riversidesec.pages.dev'
+    : 'https://interactive-display.pages.dev'
 
   // Detect Web Share API support (mobile save-to-gallery)
   useEffect(() => {

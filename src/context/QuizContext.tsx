@@ -42,7 +42,7 @@ const QuizContext = createContext<QuizContextType | undefined>(undefined)
 /**
  * Calculate profile based on answer distribution
  * A = Guardian (security, preparedness)
- * B = Builder (community, unity)
+ * B = Steward (community, unity)
  * C = Shaper (innovation, adaptability)
  */
 function calculateProfile(answers: QuizAnswers): ProfileType {
@@ -73,7 +73,7 @@ function calculateProfile(answers: QuizAnswers): ProfileType {
   if (first[1] > second[1]) {
     // Pure profile
     if (first[0] === 'A') return 'guardian'
-    if (first[0] === 'B') return 'builder'
+    if (first[0] === 'B') return 'steward'
     return 'shaper'
   }
 
@@ -109,10 +109,10 @@ function calculateProfile(answers: QuizAnswers): ProfileType {
 
     // Return hybrid profile based on primary/secondary
     if ((primary === 'A' && secondary === 'B') || (primary === 'B' && secondary === 'A')) {
-      return 'guardian-builder'
+      return 'guardian-steward'
     }
     if ((primary === 'B' && secondary === 'C') || (primary === 'C' && secondary === 'B')) {
-      return 'builder-shaper'
+      return 'steward-shaper'
     }
     if ((primary === 'A' && secondary === 'C') || (primary === 'C' && secondary === 'A')) {
       return 'adaptive-guardian'
@@ -126,17 +126,17 @@ function calculateProfile(answers: QuizAnswers): ProfileType {
   if (futureFirst[1] > futureSecond[1]) {
     // Clear winner in future questions
     if (futureFirst[0] === 'A') return 'guardian'
-    if (futureFirst[0] === 'B') return 'builder'
+    if (futureFirst[0] === 'B') return 'steward'
     return 'shaper'
   }
 
   // Use Q6 as final tiebreaker
   if (answers.q6 === 'A') return 'guardian'
-  if (answers.q6 === 'B') return 'builder'
+  if (answers.q6 === 'B') return 'steward'
   if (answers.q6 === 'C') return 'shaper'
 
   // Default fallback
-  return 'builder'
+  return 'steward'
 }
 
 const STORAGE_KEY = 'quiz-state'

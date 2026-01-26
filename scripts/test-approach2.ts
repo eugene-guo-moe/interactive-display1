@@ -4,7 +4,7 @@
 
 import { chromium } from 'playwright'
 
-const SITE_URL = 'https://riversidesec.pages.dev'
+const SITE_URL = 'https://interactive-display.pages.dev'
 
 async function main() {
   console.log('='.repeat(60))

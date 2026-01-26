@@ -160,7 +160,7 @@ export interface Env {
 }
 
 // Valid profile types for image generation
-type ProfileType = 'guardian' | 'builder' | 'shaper' | 'guardian-builder' | 'builder-shaper' | 'adaptive-guardian'
+type ProfileType = 'guardian' | 'steward' | 'shaper' | 'guardian-steward' | 'steward-shaper' | 'adaptive-guardian'
 // Legacy time periods (for backwards compatibility)
 type TimePeriod = 'past' | 'present' | 'future'
 // Combined type for the API
@@ -238,12 +238,12 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
 // Validate R2 path to prevent path traversal - strict pattern matching
 function isValidR2Path(path: string): boolean {
   // Strict pattern: generated/{category}/{timestamp}-{random}.jpg
-  // Categories: legacy (past|present|future) or profiles (guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)
-  const generatedPattern = /^generated\/(past|present|future|guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)\/\d+-[a-z0-9]{7}\.jpg$/
+  // Categories: legacy (past|present|future) or profiles (guardian|steward|shaper|guardian-steward|steward-shaper|adaptive-guardian)
+  const generatedPattern = /^generated\/(past|present|future|guardian|steward|shaper|guardian-steward|steward-shaper|adaptive-guardian)\/\d+-[a-z0-9]{7}\.jpg$/
   // Strict pattern: uploads/{timestamp}-face.jpg
   const uploadsPattern = /^uploads\/\d+-[a-z0-9]{7}-face\.jpg$/
   // Strict pattern: cards/{profile}/{timestamp}-{random}.png
-  const cardsPattern = /^cards\/(guardian|builder|shaper|guardian-builder|builder-shaper|adaptive-guardian)\/\d+-[a-z0-9]{9}\.png$/
+  const cardsPattern = /^cards\/(guardian|steward|shaper|guardian-steward|steward-shaper|adaptive-guardian)\/\d+-[a-z0-9]{9}\.png$/
 
   return generatedPattern.test(path) || uploadsPattern.test(path) || cardsPattern.test(path)
 }
@@ -255,8 +255,8 @@ function getAllowedOrigins(env: Env): string[] {
   }
   // Default allowed origins - update these for your deployment
   return [
-    'https://interactive-display.vercel.app',
-    'https://riversidesec.vercel.app',
+    'https://interactive-display1.vercel.app',
+    'https://interactive-display.pages.dev',
     'http://localhost:3000',
     'http://localhost:3001',
   ]
@@ -915,7 +915,7 @@ export default {
         }
 
         // Validate timePeriod (accepts both legacy time periods and new profile types)
-        const validCategories = ['past', 'present', 'future', 'guardian', 'builder', 'shaper', 'guardian-builder', 'builder-shaper', 'adaptive-guardian']
+        const validCategories = ['past', 'present', 'future', 'guardian', 'steward', 'shaper', 'guardian-steward', 'steward-shaper', 'adaptive-guardian']
         if (!validCategories.includes(timePeriod)) {
           return new Response(
             JSON.stringify({ error: 'Invalid category' }),
@@ -1157,19 +1157,19 @@ export default {
 
       // Extract profile type from path for accent color
       const profileMatch = imagePath.match(/^cards\/([\w-]+)\//)
-      const profileType = profileMatch?.[1] || 'builder'
+      const profileType = profileMatch?.[1] || 'steward'
       const profileColors: Record<string, string> = {
         guardian: '#F59E0B',
-        builder: '#10B981',
+        steward: '#10B981',
         shaper: '#6366F1',
-        'guardian-builder': '#F59E0B',
-        'builder-shaper': '#14B8A6',
+        'guardian-steward': '#F59E0B',
+        'steward-shaper': '#14B8A6',
         'adaptive-guardian': '#8B5CF6',
       }
       const accentColor = profileColors[profileType] || '#10B981'
       // Amber/gold needs dark text for contrast; the rest use white
-      const btnTextColor = (profileType === 'guardian' || profileType === 'guardian-builder') ? '#1a1a1a' : '#ffffff'
-      const btnSpinnerBorder = (profileType === 'guardian' || profileType === 'guardian-builder') ? '#1a1a1a30' : '#ffffff50'
+      const btnTextColor = (profileType === 'guardian' || profileType === 'guardian-steward') ? '#1a1a1a' : '#ffffff'
+      const btnSpinnerBorder = (profileType === 'guardian' || profileType === 'guardian-steward') ? '#1a1a1a30' : '#ffffff50'
       const btnSpinnerTop = btnTextColor
 
       const html = `<!DOCTYPE html>

@@ -63,6 +63,7 @@ interface QuestionCardProps {
   questionNumber: number
   totalQuestions: number
   question: string
+  scenario?: string
   questionIcon?: string
   backgroundImage?: string
   backgroundPosition?: string
@@ -77,6 +78,7 @@ export default function QuestionCard({
   questionNumber,
   totalQuestions,
   question,
+  scenario,
   backgroundImage,
   backgroundPosition,
   backgroundSize,
@@ -187,8 +189,15 @@ export default function QuestionCard({
           <StepIndicator current={questionNumber} total={totalQuestions} />
         </div>
 
-        {/* Question section with typewriter */}
+        {/* Scenario and Question section */}
         <div className="mb-4 landscape:mb-2 md:mb-6 md:landscape:mb-3 lg:mb-8 lg:landscape:mb-4 text-center px-4 flex-shrink-0">
+          {/* Scenario - displayed as context */}
+          {scenario && (
+            <p className="text-white/70 text-sm landscape:text-xs md:text-base md:landscape:text-sm lg:text-lg lg:landscape:text-base xl:text-xl 2xl:text-2xl leading-relaxed max-w-2xl xl:max-w-3xl 2xl:max-w-4xl mx-auto mb-4 landscape:mb-2 md:mb-5 md:landscape:mb-3">
+              {scenario}
+            </p>
+          )}
+          {/* Question with typewriter */}
           <h2 className="font-display text-xl landscape:text-lg md:text-2xl md:landscape:text-xl lg:text-3xl lg:landscape:text-2xl xl:text-4xl 2xl:text-5xl font-semibold text-white leading-relaxed landscape:leading-snug max-w-2xl xl:max-w-3xl 2xl:max-w-4xl mx-auto drop-shadow-lg">
             {displayedText}
             {!typingComplete && (

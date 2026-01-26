@@ -22,7 +22,7 @@ async function checkCard() {
     }
   })
 
-  const testUrl = 'https://riversidesec.pages.dev/result?testImage=https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png&testProfile=builder'
+  const testUrl = 'https://interactive-display.pages.dev/result?testImage=https://v3b.fal.media/files/b/0a8b6019/VSMO8GMXP7nxhrXoJEJ6a.png&testProfile=builder'
   await page.goto(testUrl)
 
   // Wait for card to be ready

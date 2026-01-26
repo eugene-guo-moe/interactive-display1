@@ -1,111 +1,105 @@
 export interface Question {
   id: number
   question: string
+  scenario: string
   icon: string
   backgroundImage: string
   backgroundPosition?: string
   backgroundSize?: string
   options: { label: string; text: string; emoji: string }[]
   answerKey: 'q1' | 'q2' | 'q3' | 'q4' | 'q5' | 'q6'
-  section: 'past' | 'future'
 }
 
-// Heritage backgrounds for Past questions (Q1-3)
-const pastBackgrounds = [
-  'https://images.unsplash.com/photo-1589848014453-f5371e76d4ed?w=1920&q=80', // Chinatown shophouse corner
+// Background images (reusing existing Unsplash images)
+const backgrounds = [
+  'https://images.unsplash.com/photo-1589848014453-f5371e76d4ed?w=1920&q=80', // Chinatown shophouse
   'https://images.unsplash.com/photo-1750608454572-8bcf7c580986?w=1920&q=80', // Buddha Tooth Relic Temple
   'https://images.unsplash.com/photo-1634024309115-2966435f0815?w=1920&q=80', // Bumboat at Pulau Ubin
-]
-
-// Modern/futuristic backgrounds for Future questions (Q4-6)
-const futureBackgrounds = [
   'https://images.unsplash.com/photo-1698513924628-4f6e0e4c00f6?w=1920&q=80', // Supertrees at night
-  'https://images.unsplash.com/photo-1556803816-febf2fe0d10b?w=1920&q=80', // Jewel Changi Airport at night
+  'https://images.unsplash.com/photo-1556803816-febf2fe0d10b?w=1920&q=80', // Jewel Changi Airport
   'https://images.unsplash.com/photo-1747583286685-ee48d3e599f9?w=1920&q=80', // Marina Bay Sands at night
 ]
 
 export const questions: Question[] = [
-  // SECTION 1: Singapore's Past — "How do we understand where we came from?"
   {
     id: 1,
-    question: "When you think about Singapore's early years, what stands out most to you?",
-    icon: '🏛️',
-    backgroundImage: pastBackgrounds[0],
+    question: 'What is your immediate response?',
+    scenario: 'A coordinated cyberattack has disrupted digital services across Singapore. Fake messages are spreading rapidly, and public confidence in online systems is wavering.',
+    icon: '🔒',
+    backgroundImage: backgrounds[0],
     backgroundSize: '115%',
     backgroundPosition: '45% center',
     options: [
-      { label: 'A', text: 'How Singapore survived despite having almost no natural resources', emoji: '💪' },
-      { label: 'B', text: 'How leaders made tough decisions to ensure stability and security', emoji: '🛡️' },
-      { label: 'C', text: 'How ordinary people worked together to build our nation', emoji: '🤝' },
+      { label: 'A', text: 'Lock down affected systems and tighten cybersecurity regulations to restore trust and protect citizens.', emoji: '🛡️' },
+      { label: 'B', text: 'Activate community networks and digital literacy groups to help citizens verify information and stay calm.', emoji: '🤝' },
+      { label: 'C', text: 'Deploy AI-driven monitoring and adaptive cyber-defence tools to counter threats in real time.', emoji: '🚀' },
     ],
     answerKey: 'q1',
-    section: 'past',
   },
   {
     id: 2,
-    question: "Which lesson from Singapore's past feels most relevant today?",
-    icon: '📜',
-    backgroundImage: pastBackgrounds[1],
+    question: 'How do you respond?',
+    scenario: "A major redevelopment project threatens to erase historic neighbourhoods tied to Singapore's cultural identity. Public backlash is growing.",
+    icon: '🏛️',
+    backgroundImage: backgrounds[1],
     options: [
-      { label: 'A', text: 'We cannot take peace and security for granted', emoji: '🕊️' },
-      { label: 'B', text: 'Strong leadership matters most during crises', emoji: '🎯' },
-      { label: 'C', text: 'Unity is our greatest strength', emoji: '💪' },
+      { label: 'A', text: 'Enforce protective zoning laws to safeguard key heritage sites from redevelopment.', emoji: '🛡️' },
+      { label: 'B', text: 'Bring residents, cultural groups, and planners together to co-create preservation solutions.', emoji: '🤝' },
+      { label: 'C', text: 'Use digital archives, AR experiences, and smart urban design to integrate heritage into new developments.', emoji: '🚀' },
     ],
     answerKey: 'q2',
-    section: 'past',
   },
   {
     id: 3,
-    question: 'If you were living in early Singapore, what would you have found most challenging?',
-    icon: '⏳',
-    backgroundImage: pastBackgrounds[2],
+    question: 'What should be prioritised moving forward?',
+    scenario: "As Singapore's society becomes more diverse and the future of work evolves, policymakers are exploring how meritocracy can continue to support opportunity and social mobility for all.",
+    icon: '⚖️',
+    backgroundImage: backgrounds[2],
     options: [
-      { label: 'A', text: "The uncertainty about Singapore's future", emoji: '❓' },
-      { label: 'B', text: 'The need to work with people very different from yourself', emoji: '🌏' },
-      { label: 'C', text: 'Having to adapt to a changing world with limited resources', emoji: '🔄' },
+      { label: 'A', text: 'Uphold clear standards and structured pathways to maintain trust, fairness, and confidence in the system.', emoji: '🛡️' },
+      { label: 'B', text: 'Expand mentoring and community-based support to help individuals realise their potential at every stage of life.', emoji: '🤝' },
+      { label: 'C', text: 'Evolve education pathways through personalised learning and innovative approaches to meet changing needs.', emoji: '🚀' },
     ],
     answerKey: 'q3',
-    section: 'past',
   },
-  // SECTION 2: Aspirations for Singapore's Future — "What kind of Singapore should we build?"
   {
     id: 4,
-    question: "In 10 years' time, what do you hope Singapore will be best known for?",
-    icon: '🔮',
-    backgroundImage: futureBackgrounds[0],
+    question: 'What is your priority?',
+    scenario: 'As services move online, seniors and vulnerable groups struggle to access essential platforms, risking exclusion.',
+    icon: '📱',
+    backgroundImage: backgrounds[3],
     options: [
-      { label: 'A', text: 'Being safe, secure, and well-prepared for crises', emoji: '🛡️' },
-      { label: 'B', text: 'Being a caring, inclusive, and united society', emoji: '❤️' },
-      { label: 'C', text: 'Being innovative, adaptable, and future-ready', emoji: '🚀' },
+      { label: 'A', text: 'Guarantee baseline access and safeguards so everyone can use essential digital services securely.', emoji: '🛡️' },
+      { label: 'B', text: 'Mobilise volunteers and community centres to guide and support less tech-savvy citizens.', emoji: '🤝' },
+      { label: 'C', text: 'Develop intuitive, accessible platforms designed for users of all ages and abilities.', emoji: '🚀' },
     ],
     answerKey: 'q4',
-    section: 'future',
   },
   {
     id: 5,
-    question: 'If Singapore faces a serious crisis in the future, what should matter most?',
-    icon: '⚡',
-    backgroundImage: futureBackgrounds[1],
+    question: 'How do you respond?',
+    scenario: 'Automation and economic shifts are threatening job security for lower-wage workers, increasing anxiety about the future.',
+    icon: '💼',
+    backgroundImage: backgrounds[4],
     options: [
-      { label: 'A', text: 'Clear plans and strong national systems, including capable leaders', emoji: '📋' },
-      { label: 'B', text: 'Citizens who look out for one another', emoji: '🤗' },
-      { label: 'C', text: 'People who can adapt quickly and find new solutions', emoji: '💡' },
+      { label: 'A', text: 'Strengthen employment protections and wage safeguards to provide stability.', emoji: '🛡️' },
+      { label: 'B', text: 'Expand retraining programmes and partnerships between employers and communities.', emoji: '🤝' },
+      { label: 'C', text: 'Use technology and upskilling initiatives to open new career pathways.', emoji: '🚀' },
     ],
     answerKey: 'q5',
-    section: 'future',
   },
   {
     id: 6,
-    question: 'As a Singaporean, how do you see your role in our future?',
-    icon: '🌟',
-    backgroundImage: futureBackgrounds[2],
+    question: 'What action do you take?',
+    scenario: "As globalisation continues to shape Singapore's workforce, reports of increasing misunderstandings between locals and foreign workers have prompted calls for timely action to maintain social harmony in shared workplaces and neighbourhoods.",
+    icon: '🌏',
+    backgroundImage: backgrounds[5],
     options: [
-      { label: 'A', text: 'Acting with integrity and responsibility to keep Singapore united and strong', emoji: '🏆' },
-      { label: 'B', text: 'Contributing positively to build my community and those around me', emoji: '🌱' },
-      { label: 'C', text: 'Being innovative and embracing change to help Singapore navigate the future', emoji: '🔥' },
+      { label: 'A', text: 'Maintain clear policies to balance national interests and preserve social stability.', emoji: '🛡️' },
+      { label: 'B', text: 'Promote intercultural dialogue and shared community spaces to build mutual understanding.', emoji: '🤝' },
+      { label: 'C', text: 'Leverage digital platforms to encourage cross-cultural engagement and collaboration.', emoji: '🚀' },
     ],
     answerKey: 'q6',
-    section: 'future',
   },
 ]
 

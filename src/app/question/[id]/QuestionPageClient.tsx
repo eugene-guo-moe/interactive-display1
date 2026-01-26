@@ -62,6 +62,7 @@ export default function QuestionPageClient({ id }: { id: string }) {
       questionNumber={questionId}
       totalQuestions={totalQuestions}
       question={question.question}
+      scenario={question.scenario}
       questionIcon={question.icon}
       backgroundImage={question.backgroundImage}
       backgroundPosition={question.backgroundPosition}
