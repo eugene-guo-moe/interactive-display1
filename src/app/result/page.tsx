@@ -716,7 +716,7 @@ function ResultPageContent() {
   }
 
   return (
-    <div className="relative flex-1 flex flex-col page-transition overflow-hidden" style={{ backgroundColor: '#050505' }}>
+    <div className="relative flex-1 flex flex-col page-transition overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#050505' }}>
       {/* Background - generated image, heavily blurred */}
       {displayImageUrl && (
         <div
