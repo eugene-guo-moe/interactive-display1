@@ -12,7 +12,7 @@ const loadingSteps = [
   { text: 'Final touches', description: 'Polishing the details' },
 ]
 
-const stepDurations = [4000, 12000, 10000, 4000] // Total: 30 seconds
+const stepDurations = [12000, 36000, 30000, 12000] // Total: 90 seconds
 
 // Background images based on profile type
 const backgroundImages: Record<string, string> = {
@@ -86,8 +86,8 @@ export default function LoadingPage() {
     if (hasStarted.current) return
     hasStarted.current = true
 
-    // Start progress animation (runs for 30 seconds to ~90%)
-    const totalDuration = 30000
+    // Start progress animation (runs for 90 seconds to ~90%)
+    const totalDuration = 90000
     const maxProgress = 90
     const startTime = Date.now()
 
@@ -183,8 +183,8 @@ export default function LoadingPage() {
       }
     })
 
-    // Final timeout at 35 seconds - show timeout UI when progress bar stops
-    // Progress bar runs for 30 seconds, so show feedback shortly after
+    // Final timeout at 95 seconds - show timeout UI when progress bar stops
+    // Progress bar runs for 90 seconds, so show feedback shortly after
     const finalTimeoutId = setTimeout(() => {
       if (!isComplete.current) {
         setTimedOut(true)
@@ -192,7 +192,7 @@ export default function LoadingPage() {
           abortControllerRef.current.abort()
         }
       }
-    }, 35000)
+    }, 95000)
 
     return () => {
       clearTimeout(finalTimeoutId)
