@@ -233,6 +233,8 @@ function ResultPageContent() {
   const [imageBase64, setImageBase64] = useState<string | null>(null)
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [logoBase64, setLogoBase64] = useState<string | null>(null)
+  // Safe display URL - updated after R2 upload or base64 conversion (for Replicate compatibility)
+  const [safeDisplayUrl, setSafeDisplayUrl] = useState<string | null>(null)
   const [canShare, setCanShare] = useState(false)
   const [cardCaptured, setCardCaptured] = useState(false)
   const hasStartedImagePrep = useRef(false)
@@ -263,6 +265,9 @@ function ResultPageContent() {
 
   // Use FAL.ai URL for display (fast CDN), or test image in test mode
   const displayImageUrl = isTestMode ? testImage : (resultImageUrl || photoData)
+
+  // Effective display URL: prefer safeDisplayUrl (R2/base64) over external URL for Replicate compatibility
+  const effectiveDisplayUrl = safeDisplayUrl || displayImageUrl
 
   // Store displayImageUrl in ref for retry (persists even if context changes)
   useEffect(() => {
@@ -347,10 +352,15 @@ function ResultPageContent() {
       dbg(`imageUrl: ${imageUrl?.substring(0, 50)}...`)
 
       try {
-        // Upload FAL.ai image to R2 first so we can use same-origin URL for canvas
+        // Upload generated image to R2 first so we can use same-origin URL for canvas
         let imageUrlForCard = imageUrl
-        if (resultImageUrl && r2Path && (resultImageUrl.includes('fal.media') || resultImageUrl.includes('fal.ai'))) {
-          dbg('Uploading FAL.ai image to R2...')
+        const isExternalImage = resultImageUrl && (
+          resultImageUrl.includes('fal.media') ||
+          resultImageUrl.includes('fal.ai') ||
+          resultImageUrl.includes('replicate.delivery')
+        )
+        if (resultImageUrl && r2Path && isExternalImage) {
+          dbg('Uploading generated image to R2...')
           try {
             const timePeriod = r2Path.split('/')[1] || 'present'
             const uploadRes = await fetch(`${WORKER_URL}/upload-to-r2`, {
@@ -361,6 +371,8 @@ function ResultPageContent() {
             if (uploadRes.ok) {
               const data = await uploadRes.json()
               imageUrlForCard = data.r2Url
+              // Update safe display URL immediately for Replicate compatibility
+              setSafeDisplayUrl(data.r2Url)
               dbg(`R2 upload OK: ${imageUrlForCard.substring(0, 60)}`)
             } else {
               dbg(`R2 upload failed: ${uploadRes.status} ${uploadRes.statusText}`)
@@ -718,18 +730,18 @@ function ResultPageContent() {
   return (
     <div className="relative flex-1 flex flex-col page-transition overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#050505' }}>
       {/* Background - generated image, heavily blurred */}
-      {displayImageUrl && (
+      {effectiveDisplayUrl && (
         <div
           className="fixed inset-[-10%] bg-cover bg-center pointer-events-none"
           style={{
-            backgroundImage: `url(${displayImageUrl})`,
+            backgroundImage: `url(${effectiveDisplayUrl})`,
             filter: 'blur(40px)',
             transform: 'scale(1.1)',
           }}
         />
       )}
       {/* Fallback to profile image if no generated image */}
-      {!displayImageUrl && (
+      {!effectiveDisplayUrl && (
         <div
           className="fixed inset-[-5%] bg-cover bg-center pointer-events-none"
           style={{ backgroundImage: `url(${currentStyle.image})` }}
@@ -814,11 +826,11 @@ function ResultPageContent() {
               outline: `1px solid ${currentStyle.color}30`
             }}
           >
-            {displayImageUrl ? (
+            {effectiveDisplayUrl ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={displayImageUrl}
+                  src={effectiveDisplayUrl}
                   alt="Your Singapore moment"
                   className={`w-full h-full object-contain md:object-cover transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'

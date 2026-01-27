@@ -149,6 +149,20 @@ export default function LoadingPage() {
         setProgress(100)
         setCurrentStep(loadingSteps.length - 1)
 
+        // Force save to sessionStorage before navigation (don't rely on effect timing)
+        try {
+          const currentSession = sessionStorage.getItem('quiz-state')
+          const parsed = currentSession ? JSON.parse(currentSession) : {}
+          sessionStorage.setItem('quiz-state', JSON.stringify({
+            ...parsed,
+            resultImageUrl: data.imageUrl,
+            r2Path: data.r2Path,
+            qrUrl: null,
+          }))
+        } catch (e) {
+          console.error('Failed to save to sessionStorage:', e)
+        }
+
         // Navigate to result
         setTimeout(() => {
           router.push('/result')
