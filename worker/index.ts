@@ -582,6 +582,87 @@ async function detectFaceAttributes(
   }
 }
 
+// Face bounding box for smart cropping
+interface FaceBoundingBox {
+  top: number    // 0-1, distance from top
+  left: number   // 0-1, distance from left
+  width: number  // 0-1, face width as percentage
+  height: number // 0-1, face height as percentage
+}
+
+// Detect face bounding box from image using AWS Rekognition
+async function detectFacePosition(
+  imageBytes: ArrayBuffer,
+  env: Env
+): Promise<FaceBoundingBox | null> {
+  try {
+    const aws = new AwsClient({
+      accessKeyId: env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+      region: env.AWS_REGION || 'us-east-1',
+    })
+
+    // Convert ArrayBuffer to base64
+    const base64Image = btoa(
+      new Uint8Array(imageBytes).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    )
+
+    const rekognitionEndpoint = `https://rekognition.${env.AWS_REGION || 'us-east-1'}.amazonaws.com/`
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+    try {
+      const response = await aws.fetch(rekognitionEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-amz-json-1.1',
+          'X-Amz-Target': 'RekognitionService.DetectFaces',
+        },
+        body: JSON.stringify({
+          Image: {
+            Bytes: base64Image,
+          },
+          Attributes: ['DEFAULT'],
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        return null
+      }
+
+      const result = await response.json() as {
+        FaceDetails?: Array<{
+          BoundingBox?: {
+            Top: number
+            Left: number
+            Width: number
+            Height: number
+          }
+        }>
+      }
+
+      // Get the first face's bounding box
+      const boundingBox = result.FaceDetails?.[0]?.BoundingBox
+      if (boundingBox) {
+        return {
+          top: boundingBox.Top,
+          left: boundingBox.Left,
+          width: boundingBox.Width,
+          height: boundingBox.Height,
+        }
+      }
+
+      return null
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  } catch {
+    return null
+  }
+}
+
 // Security headers for all responses
 function getSecurityHeaders(): Record<string, string> {
   return {
@@ -730,6 +811,82 @@ export default {
         return new Response(JSON.stringify({
           success: false,
           error: 'Gender detection failed'
+        }), {
+          status: 500,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    // Detect face position for smart cropping (requires auth)
+    if (url.pathname === '/detect-face-position' && request.method === 'POST') {
+      // Verify API key
+      if (!verifyApiKey(request, env)) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      try {
+        const body = await request.json() as { imageUrl: string }
+        const { imageUrl } = body
+
+        if (!imageUrl) {
+          return new Response(JSON.stringify({ error: 'imageUrl required' }), {
+            status: 400,
+            headers: { ...allHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // SSRF Protection: Validate URL
+        let parsedUrl: URL
+        try {
+          parsedUrl = new URL(imageUrl)
+        } catch {
+          return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
+            status: 400,
+            headers: { ...allHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Only allow HTTPS
+        if (parsedUrl.protocol !== 'https:') {
+          return new Response(JSON.stringify({ error: 'Only HTTPS URLs allowed' }), {
+            status: 400,
+            headers: { ...allHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Block private IPs
+        if (isPrivateIP(parsedUrl.hostname)) {
+          return new Response(JSON.stringify({ error: 'Access denied' }), {
+            status: 403,
+            headers: { ...allHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Fetch the image
+        const imageResponse = await fetch(imageUrl)
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to fetch image: ${imageResponse.status}`)
+        }
+        const imageBytes = await imageResponse.arrayBuffer()
+
+        // Detect face bounding box
+        const faceBox = await detectFacePosition(imageBytes, env)
+
+        return new Response(JSON.stringify({
+          success: true,
+          faceBox,
+        }), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch {
+        return new Response(JSON.stringify({
+          success: false,
+          faceBox: null,
+          error: 'Face detection failed'
         }), {
           status: 500,
           headers: { ...allHeaders, 'Content-Type': 'application/json' },

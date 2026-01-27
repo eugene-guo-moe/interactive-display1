@@ -35,7 +35,7 @@ export const profiles: Record<ProfileType, Profile> = {
   },
   steward: {
     type: 'steward',
-    icon: '/icon-builder.png',
+    icon: '/icon-steward.png',
     title: 'The Community Steward',
     tagline: 'You believe Singapore is strongest when its people stand together.',
     description: "You see unity as Singapore's greatest asset. You value empathy, cooperation, and shared responsibility, especially in times of uncertainty. You understand that resilience is built not only through systems, but through trust and care between people.",
@@ -51,7 +51,7 @@ export const profiles: Record<ProfileType, Profile> = {
   },
   'guardian-steward': {
     type: 'guardian-steward',
-    icon: '/icon-guardian-builder.png',
+    icon: '/icon-guardian-steward.png',
     title: 'The Guardian–Steward',
     tagline: 'You believe security and unity go hand in hand.',
     description: 'You recognise that strong safeguards matter, but trust and social cohesion matter just as much. You value preparedness alongside compassion, and understand that stability is strongest when people feel protected and supported.',
@@ -59,7 +59,7 @@ export const profiles: Record<ProfileType, Profile> = {
   },
   'steward-shaper': {
     type: 'steward-shaper',
-    icon: '/icon-builder-shaper.png',
+    icon: '/icon-steward-shaper.png',
     title: 'The Steward–Shaper',
     tagline: 'You believe progress works best when it brings people along.',
     description: "You care deeply about communities while embracing innovation and change. You believe Singapore's growth should be inclusive, ensuring that new ideas and technologies uplift society as a whole.",
