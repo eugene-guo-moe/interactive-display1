@@ -141,7 +141,7 @@ function calculateProfile(answers: QuizAnswers): ProfileType {
 
 const STORAGE_KEY = 'quiz-state'
 
-function loadFromSession(): { answers?: QuizAnswers; resultImageUrl?: string; qrUrl?: string; r2Path?: string } | null {
+function loadFromSession(): { answers?: QuizAnswers; photoData?: string; resultImageUrl?: string; qrUrl?: string; r2Path?: string } | null {
   if (typeof window === 'undefined') return null
   try {
     const stored = sessionStorage.getItem(STORAGE_KEY)
@@ -149,7 +149,7 @@ function loadFromSession(): { answers?: QuizAnswers; resultImageUrl?: string; qr
   } catch { return null }
 }
 
-function saveToSession(data: { answers: QuizAnswers; resultImageUrl: string | null; qrUrl: string | null; r2Path: string | null }) {
+function saveToSession(data: { answers: QuizAnswers; photoData: string | null; resultImageUrl: string | null; qrUrl: string | null; r2Path: string | null }) {
   if (typeof window === 'undefined') return
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
 }
@@ -168,6 +168,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     const saved = loadFromSession()
     if (saved) {
       if (saved.answers) setAnswers(saved.answers)
+      if (saved.photoData) setPhotoData(saved.photoData)
       if (saved.resultImageUrl) setResultImageUrl(saved.resultImageUrl)
       if (saved.qrUrl) setQrUrl(saved.qrUrl)
       if (saved.r2Path) setR2Path(saved.r2Path)
@@ -178,8 +179,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   // Persist key state to sessionStorage after hydration
   useEffect(() => {
     if (!hydrated) return
-    saveToSession({ answers, resultImageUrl, qrUrl, r2Path })
-  }, [answers, resultImageUrl, qrUrl, r2Path, hydrated])
+    saveToSession({ answers, photoData, resultImageUrl, qrUrl, r2Path })
+  }, [answers, photoData, resultImageUrl, qrUrl, r2Path, hydrated])
 
   const setAnswer = useCallback((question: keyof QuizAnswers, answer: string) => {
     setAnswers(prev => ({ ...prev, [question]: answer }))
