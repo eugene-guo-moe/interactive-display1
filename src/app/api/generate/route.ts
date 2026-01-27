@@ -6,7 +6,7 @@ export const maxDuration = 60 // Allow up to 60 seconds for FAL.ai generation
 
 // Worker URL from environment variable
 const WORKER_URL = 'https://interactive-display.eugene-ff3.workers.dev'
-const WORKER_API_KEY = process.env.WORKER_API_KEY || ''
+const WORKER_API_KEY = process.env.WORKER_API_KEY || '5CSVqaHCxtWPL1PSEbMlMbI3AVeZmQh5'
 
 // Security constants
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB max for base64 string
