@@ -14,6 +14,15 @@ export default function WelcomePage() {
     resetQuiz()
   }, [resetQuiz])
 
+  // Trigger FAL.ai warm-up on mount to reduce cold starts
+  // By the time user completes quiz (~90-120s), the model will be warm
+  useEffect(() => {
+    // Fire-and-forget warm-up request
+    fetch('/api/warm-up', { method: 'POST' }).catch(() => {
+      // Silent failure - warm-up is best-effort optimization
+    })
+  }, [])
+
   // Auto-cycle through phases
   useEffect(() => {
     const interval = setInterval(() => {
@@ -57,7 +66,7 @@ export default function WelcomePage() {
 
   return (
     <div
-      className="flex-1 flex items-center justify-center overflow-hidden relative"
+      className="flex-1 flex items-center justify-center overflow-x-hidden relative"
       style={{ backgroundColor: '#050505' }}
     >
       {/* Background images with smooth crossfade only - no zoom */}

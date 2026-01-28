@@ -20,7 +20,7 @@ import { AwsClient } from 'aws4fetch'
 
 /**
  * Durable Object for FAL.ai concurrency limiting
- * Ensures max 40 concurrent requests across all worker instances
+ * Ensures max 20 concurrent requests across all worker instances
  * Queues excess requests and provides queue position feedback
  */
 export class ConcurrencyLimiter {
@@ -30,8 +30,13 @@ export class ConcurrencyLimiter {
     resolve: (response: Response) => void
     requestId: string
   }> = []
-  private readonly maxConcurrent = 40
-  private readonly queueTimeout = 120000 // 2 minutes max wait
+  private readonly maxConcurrent = 20
+  private readonly queueTimeout = 300000 // 5 minutes max wait
+
+  // Warm-up tracking for FAL.ai cold start prevention
+  private lastWarmUpTime: number = 0
+  private lastGenerationTime: number = 0
+  private readonly warmUpCooldown = 180000 // 3 minutes (matches FAL.ai keep-alive)
 
   constructor(state: DurableObjectState) {
     this.state = state
@@ -54,6 +59,41 @@ export class ConcurrencyLimiter {
         queued: this.waitingQueue.length,
         max: this.maxConcurrent,
       }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Warm-up status endpoint - check if FAL.ai model needs warming
+    if (url.pathname === '/warm-up-status') {
+      const now = Date.now()
+      const timeSinceWarmUp = now - this.lastWarmUpTime
+      const timeSinceGeneration = now - this.lastGenerationTime
+      // Need warm-up if: never warmed OR both warmup and generation are older than cooldown
+      const needsWarmUp = this.lastWarmUpTime === 0 ||
+        (timeSinceWarmUp > this.warmUpCooldown && timeSinceGeneration > this.warmUpCooldown)
+      return new Response(JSON.stringify({
+        needsWarmUp,
+        lastWarmUpTime: this.lastWarmUpTime,
+        lastGenerationTime: this.lastGenerationTime,
+        timeSinceWarmUp,
+        timeSinceGeneration,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Record warm-up time
+    if (url.pathname === '/record-warm-up') {
+      this.lastWarmUpTime = Date.now()
+      return new Response(JSON.stringify({ recorded: true, time: this.lastWarmUpTime }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Record generation time (called after successful image generation)
+    if (url.pathname === '/record-generation') {
+      this.lastGenerationTime = Date.now()
+      return new Response(JSON.stringify({ recorded: true, time: this.lastGenerationTime }), {
         headers: { 'Content-Type': 'application/json' },
       })
     }
@@ -149,6 +189,7 @@ export class ConcurrencyLimiter {
 
 export interface Env {
   FAL_KEY: string
+  REPLICATE_API_KEY?: string // Replicate API key for fallback generation
   AWS_ACCESS_KEY_ID: string
   AWS_SECRET_ACCESS_KEY: string
   AWS_REGION: string
@@ -237,9 +278,10 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
 
 // Validate R2 path to prevent path traversal - strict pattern matching
 function isValidR2Path(path: string): boolean {
-  // Strict pattern: generated/{category}/{timestamp}-{random}.jpg
+  // Strict pattern: generated/{category}/{timestamp}-{random}.(jpg|png)
   // Categories: legacy (past|present|future) or profiles (guardian|steward|shaper|guardian-steward|steward-shaper|adaptive-guardian)
-  const generatedPattern = /^generated\/(past|present|future|guardian|steward|shaper|guardian-steward|steward-shaper|adaptive-guardian)\/\d+-[a-z0-9]{7}\.jpg$/
+  // Note: png is used by Replicate fallback for lossless quality
+  const generatedPattern = /^generated\/(past|present|future|guardian|steward|shaper|guardian-steward|steward-shaper|adaptive-guardian)\/\d+-[a-z0-9]{7}\.(jpg|png)$/
   // Strict pattern: uploads/{timestamp}-face.jpg
   const uploadsPattern = /^uploads\/\d+-[a-z0-9]{7}-face\.jpg$/
   // Strict pattern: cards/{profile}/{timestamp}-{random}.png
@@ -463,6 +505,201 @@ async function generateWithFaceId(
   }
 
   throw new Error('FAL.ai generation timed out')
+}
+
+// Generate image with face using Replicate's PuLID FLUX (fallback provider)
+// Uses the same PuLID model for consistent face preservation
+async function generateWithReplicate(
+  faceImageUrl: string,
+  prompt: string,
+  faceAttributes: FaceAttributes,
+  apiKey: string,
+  signal?: AbortSignal
+): Promise<string> {
+  // Use gender-specific terms with appropriate descriptions
+  const personTerm = faceAttributes.gender === 'female'
+    ? 'a woman'
+    : 'a man'
+
+  // Add glasses to prompt if detected
+  const glassesDescription = faceAttributes.hasGlasses
+    ? ' wearing glasses'
+    : ''
+
+  const fullPrompt = `${prompt} featuring ${personTerm}${glassesDescription} wearing complete, modest, school-appropriate clothing with fully covered torso, portrait from waist up, face clearly visible, looking at camera, photorealistic, high quality, consistent lighting, family-friendly, appropriate for all ages`
+
+  // Step 1: Create prediction
+  const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      version: '8baa7ef2255075b46f4d91cd238c21d31181b3e6a864463f967960bb0112525b', // bytedance/flux-pulid
+      input: {
+        prompt: fullPrompt,
+        main_face_image: faceImageUrl,
+        negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
+        num_steps: 20,
+        guidance_scale: 4,
+        id_weight: 1.0,
+        width: 576,
+        height: 1024,
+        output_format: 'png',        // Lossless quality (was webp at 80%)
+        output_quality: 100,         // Max quality
+        max_sequence_length: 512,    // Better prompt following (was 128)
+      },
+    }),
+    signal,
+  })
+
+  if (!createResponse.ok) {
+    const error = await createResponse.text()
+    throw new Error(`Replicate create error: ${error}`)
+  }
+
+  const prediction = await createResponse.json() as { id: string; status: string }
+
+  if (!prediction.id) {
+    throw new Error('No prediction ID returned from Replicate')
+  }
+
+  // Step 2: Poll for completion (max 50 seconds with 2s intervals)
+  const maxPolls = 25
+  const pollInterval = 2000
+
+  for (let i = 0; i < maxPolls; i++) {
+    // Check if aborted
+    if (signal?.aborted) {
+      throw new Error('Replicate generation aborted')
+    }
+
+    // Wait before polling (skip first iteration for faster initial check)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+    }
+
+    const statusResponse = await fetch(
+      `https://api.replicate.com/v1/predictions/${prediction.id}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        signal,
+      }
+    )
+
+    if (!statusResponse.ok) {
+      continue // Retry on status check failure
+    }
+
+    const status = await statusResponse.json() as {
+      status: string
+      output?: string | string[]
+      error?: string
+    }
+
+    if (status.status === 'succeeded') {
+      const outputUrl = Array.isArray(status.output) ? status.output[0] : status.output
+
+      if (!outputUrl) {
+        throw new Error('No image in Replicate result')
+      }
+
+      return outputUrl
+    }
+
+    if (status.status === 'failed') {
+      throw new Error(`Replicate generation failed: ${status.error || 'Unknown error'}`)
+    }
+
+    // starting, processing - continue polling
+  }
+
+  throw new Error('Replicate generation timed out')
+}
+
+// Hybrid parallel generation with FAL.ai primary and Replicate fallback
+// FAL.ai starts immediately, Replicate kicks in at 40s if FAL.ai not done
+async function generateWithFallback(
+  faceImageUrl: string,
+  prompt: string,
+  category: GenerationCategory,
+  faceAttributes: FaceAttributes,
+  env: Env
+): Promise<{ url: string; provider: 'fal' | 'replicate' }> {
+  const abortController = new AbortController()
+  const FAL_THRESHOLD = 40000 // Start Replicate after 40s
+
+  console.log('[Fallback] Starting FAL.ai generation')
+
+  // Start FAL.ai immediately
+  const falPromise = generateWithFaceId(faceImageUrl, prompt, category, faceAttributes, env.FAL_KEY)
+    .then(url => ({ url, provider: 'fal' as const }))
+    .catch(err => {
+      console.log(`[Fallback] FAL.ai error: ${err.message}`)
+      return null
+    })
+
+  // Wait up to 40s for FAL.ai to complete
+  const falResult = await Promise.race([
+    falPromise,
+    new Promise<null>(resolve => setTimeout(() => resolve(null), FAL_THRESHOLD))
+  ])
+
+  if (falResult) {
+    console.log('[Fallback] FAL.ai completed within threshold')
+    return falResult
+  }
+
+  // FAL.ai not done yet - check if we have Replicate API key
+  if (!env.REPLICATE_API_KEY) {
+    console.log('[Fallback] No Replicate API key, waiting for FAL.ai')
+    const finalFalResult = await falPromise
+    if (finalFalResult) return finalFalResult
+    throw new Error('FAL.ai generation failed and no fallback available')
+  }
+
+  console.log('[Fallback] FAL.ai not done after 40s, starting Replicate')
+
+  // Start Replicate in parallel
+  const replicatePromise = generateWithReplicate(
+    faceImageUrl,
+    prompt,
+    faceAttributes,
+    env.REPLICATE_API_KEY,
+    abortController.signal
+  )
+    .then(url => ({ url, provider: 'replicate' as const }))
+    .catch(err => {
+      console.log(`[Fallback] Replicate error: ${err.message}`)
+      return null
+    })
+
+  // Race both providers - use whichever finishes first
+  const result = await Promise.race([
+    falPromise.then(r => r ? { ...r, source: 'fal-late' } : null),
+    replicatePromise.then(r => r ? { ...r, source: 'replicate' } : null)
+  ])
+
+  // If we got a result, abort the other provider
+  if (result) {
+    console.log(`[Fallback] ${result.provider} won the race`)
+    abortController.abort()
+    return result
+  }
+
+  // Both failed in the race, wait for any pending result
+  const [finalFal, finalReplicate] = await Promise.all([
+    falPromise.catch(() => null),
+    replicatePromise.catch(() => null)
+  ])
+
+  if (finalFal) return finalFal
+  if (finalReplicate) return finalReplicate
+
+  throw new Error('Both FAL.ai and Replicate failed')
 }
 
 // Fetch image from URL with size validation
@@ -718,6 +955,77 @@ export default {
         return new Response(JSON.stringify({
           error: 'Failed to get queue status',
         }), {
+          status: 500,
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    // Warm-up endpoint - trigger minimal FAL.ai request to reduce cold starts
+    // Called from welcome page to pre-warm the model before user completes quiz
+    if (url.pathname === '/warm-up' && request.method === 'POST') {
+      try {
+        // Check if warm-up is needed (skip if recent activity)
+        const limiter = env.CONCURRENCY_LIMITER.get(
+          env.CONCURRENCY_LIMITER.idFromName('global')
+        )
+        const statusRes = await limiter.fetch(new Request('https://limiter/warm-up-status'))
+        const status = await statusRes.json() as { needsWarmUp: boolean }
+
+        if (!status.needsWarmUp) {
+          console.log('[Warm-up] Skipped - model already warm')
+          return new Response(JSON.stringify({
+            success: true,
+            skipped: true,
+            message: 'Already warm',
+          }), {
+            headers: { ...allHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        console.log('[Warm-up] Starting warm-up request')
+
+        // Use a public test face (small, generic)
+        const testFaceUrl = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&h=256&fit=crop&crop=face'
+
+        // Minimal generation - just enough to load the model
+        const requestBody = {
+          prompt: 'a person, photorealistic',
+          reference_image_url: testFaceUrl,
+          num_inference_steps: 4,  // Minimum (vs 20 in production)
+          guidance_scale: 1,
+          id_weight: 0.5,
+          image_size: { width: 256, height: 256 },  // Tiny image
+          enable_safety_checker: false,
+        }
+
+        // Submit to queue (fire-and-forget - don't wait for result)
+        const submitResponse = await fetch('https://queue.fal.run/fal-ai/flux-pulid', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Key ${env.FAL_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        if (submitResponse.ok) {
+          // Record warm-up time
+          await limiter.fetch(new Request('https://limiter/record-warm-up', { method: 'POST' }))
+          console.log('[Warm-up] Request submitted successfully')
+        } else {
+          console.log('[Warm-up] FAL.ai submit failed:', await submitResponse.text())
+        }
+
+        return new Response(JSON.stringify({
+          success: submitResponse.ok,
+          message: submitResponse.ok ? 'Warm-up submitted' : 'Warm-up failed',
+        }), {
+          headers: { ...allHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (err) {
+        console.error('[Warm-up] Error:', err)
+        return new Response(JSON.stringify({ success: false }), {
           status: 500,
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
         })
@@ -1127,15 +1435,18 @@ export default {
         console.log(`[${imageId}] Upload + detect: ${timings['upload_and_detect']}ms`)
 
         // Step 3: Generate image with face embedded using PuLID FLUX
-        // PuLID achieves ~91% face recognition accuracy vs IP-Adapter's ~70-75%
-        const falStartTime = Date.now()
-        const generatedImageUrl = await generateWithFaceId(userPhotoUrl, prompt, timePeriod, faceAttributes, env.FAL_KEY)
-        timings['fal_generation'] = Date.now() - falStartTime
-        console.log(`[${imageId}] FAL.ai generation: ${timings['fal_generation']}ms`)
-        console.log(`[${imageId}] FAL.ai URL: ${generatedImageUrl}`)
+        // Uses hybrid parallel approach: FAL.ai primary, Replicate fallback at 40s
+        const generationStartTime = Date.now()
+        const generationResult = await generateWithFallback(userPhotoUrl, prompt, timePeriod, faceAttributes, env)
+        timings['generation'] = Date.now() - generationStartTime
+        console.log(`[${imageId}] Generation (${generationResult.provider}): ${timings['generation']}ms`)
+        console.log(`[${imageId}] Generated URL: ${generationResult.url}`)
+        const generatedImageUrl = generationResult.url
 
         // Generate R2 path for later upload by frontend
-        const imagePath = `generated/${timePeriod}/${imageId}.jpg`
+        // Use correct extension based on source (Replicate outputs png for lossless quality)
+        const imageExt = generationResult.provider === 'replicate' ? 'png' : 'jpg'
+        const imagePath = `generated/${timePeriod}/${imageId}.${imageExt}`
 
         // Return FAL.ai URL immediately for fast display
         // Frontend will call /upload-to-r2 to get permanent R2 URL
@@ -1147,8 +1458,11 @@ export default {
 
         console.log(`[${imageId}] Total response time: ${Date.now() - startTime}ms`)
 
-        // Release concurrency slot (don't await - use waitUntil for non-blocking)
-        ctx.waitUntil(limiter.fetch(new Request('https://limiter/release', { method: 'POST' })))
+        // Release concurrency slot and record generation time (don't await - use waitUntil for non-blocking)
+        ctx.waitUntil(Promise.all([
+          limiter.fetch(new Request('https://limiter/release', { method: 'POST' })),
+          limiter.fetch(new Request('https://limiter/record-generation', { method: 'POST' })),
+        ]))
 
         return new Response(JSON.stringify(response), {
           headers: { ...allHeaders, 'Content-Type': 'application/json' },
@@ -1191,25 +1505,30 @@ export default {
           )
         }
 
-        // Validate FAL.ai URL
-        if (!falUrl.includes('fal.media') && !falUrl.includes('fal.ai')) {
+        // Validate image URL (accept FAL.ai and Replicate URLs)
+        const isValidImageUrl = falUrl.includes('fal.media') ||
+                               falUrl.includes('fal.ai') ||
+                               falUrl.includes('replicate.delivery') ||
+                               falUrl.includes('pbxt.replicate.delivery')
+        if (!isValidImageUrl) {
           return new Response(
-            JSON.stringify({ error: 'Invalid FAL URL' }),
+            JSON.stringify({ error: 'Invalid image URL' }),
             { status: 400, headers: { ...allHeaders, 'Content-Type': 'application/json' } }
           )
         }
 
-        console.log(`[upload-to-r2] Fetching from FAL: ${falUrl}`)
+        console.log(`[upload-to-r2] Fetching image: ${falUrl}`)
         const fetchStart = Date.now()
 
-        // Fetch image from FAL.ai CDN
+        // Fetch image from FAL.ai or Replicate CDN
         const finalImage = await fetchImage(falUrl)
-        console.log(`[upload-to-r2] FAL fetch: ${Date.now() - fetchStart}ms`)
+        console.log(`[upload-to-r2] Image fetch: ${Date.now() - fetchStart}ms`)
 
-        // Upload to R2
+        // Upload to R2 with correct content type based on extension
         const uploadStart = Date.now()
+        const contentType = r2Path.endsWith('.png') ? 'image/png' : 'image/jpeg'
         await env.IMAGES_BUCKET.put(r2Path, finalImage, {
-          httpMetadata: { contentType: 'image/jpeg' },
+          httpMetadata: { contentType },
           customMetadata: {
             timePeriod,
             createdAt: new Date().toISOString(),
