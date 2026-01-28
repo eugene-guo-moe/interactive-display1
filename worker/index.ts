@@ -540,8 +540,10 @@ async function generateWithReplicate(
         negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
         num_steps: 20,
         guidance_scale: 4,
-        id_weight: 1.0,
-        width: 1024,   // Square format - better fit for card's ~square image area
+        id_weight: 1.2,              // Increased from 1.0 for stronger face preservation
+        true_cfg: 1.5,               // Enables precise control for sharper output
+        start_step: 0,               // Start face identity from step 0 for highest fidelity
+        width: 1024,                 // Square format - better fit for card's ~square image area
         height: 1024,
         output_format: 'png',        // Lossless quality (was webp at 80%)
         output_quality: 100,         // Max quality
