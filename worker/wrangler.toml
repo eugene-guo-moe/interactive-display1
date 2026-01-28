@@ -19,7 +19,7 @@ ALLOWED_ORIGINS = "https://interactive-display1.vercel.app,https://interactive-d
 binding = "IMAGES_BUCKET"
 bucket_name = "history-future-images"
 
-# Durable Object for FAL.ai concurrency limiting (max 40 concurrent)
+# Durable Object for FAL.ai concurrency limiting (max 20 concurrent)
 [[durable_objects.bindings]]
 name = "CONCURRENCY_LIMITER"
 class_name = "ConcurrencyLimiter"

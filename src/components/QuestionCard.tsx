@@ -170,7 +170,7 @@ export default function QuestionCard({
   }, [questionNumber, question, options])
 
   return (
-    <div className="relative flex-1 flex flex-col overflow-hidden">
+    <div className="relative flex-1 flex flex-col overflow-x-hidden">
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover opacity-30 pointer-events-none transition-opacity duration-500"

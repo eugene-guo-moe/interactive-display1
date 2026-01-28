@@ -18,7 +18,7 @@ export default function CameraPage() {
 
   // Check if all questions are answered
   useEffect(() => {
-    if (!answers.q1 || !answers.q2 || !answers.q3) {
+    if (!answers.q1 || !answers.q2 || !answers.q3 || !answers.q4 || !answers.q5 || !answers.q6) {
       router.push('/')
     }
   }, [answers, router])

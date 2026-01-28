@@ -36,6 +36,9 @@ export default function LoadingPage() {
   const retryCount = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  // Queue position state
+  const [queuePosition, setQueuePosition] = useState<number>(0)
+
   // Trivia state
   const [shuffledQuestions, setShuffledQuestions] = useState<TriviaQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -51,6 +54,29 @@ export default function LoadingPage() {
   useEffect(() => {
     setShuffledQuestions(shuffleQuestions(triviaQuestions))
   }, [])
+
+  // Poll queue status every 3 seconds
+  useEffect(() => {
+    if (isComplete.current || error || timedOut) return
+
+    const pollQueueStatus = async () => {
+      try {
+        const response = await fetch('/api/queue-status')
+        if (response.ok) {
+          const data = await response.json()
+          setQueuePosition(data.queuedRequests || 0)
+        }
+      } catch {
+        // Silently ignore errors - queue status is optional
+      }
+    }
+
+    // Poll immediately, then every 3 seconds
+    pollQueueStatus()
+    const intervalId = setInterval(pollQueueStatus, 3000)
+
+    return () => clearInterval(intervalId)
+  }, [error, timedOut])
 
   const currentQuestion = shuffledQuestions[currentQuestionIndex]
 
@@ -350,7 +376,7 @@ export default function LoadingPage() {
       <p className="relative z-10 text-white/40 text-sm mb-6">{loadingSteps[currentStep].text}</p>
 
       {/* Step dots */}
-      <div className="relative z-10 flex gap-3 mb-6">
+      <div className="relative z-10 flex gap-3 mb-3">
         {loadingSteps.map((_, i) => (
           <div
             key={i}
@@ -362,6 +388,18 @@ export default function LoadingPage() {
           />
         ))}
       </div>
+
+      {/* Queue position badge */}
+      {queuePosition > 0 && (
+        <div className="relative z-10 mb-6 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/30 backdrop-blur-sm">
+          <span className="text-amber-300 text-sm font-medium">
+            {queuePosition === 1 ? '1 person ahead of you' : `${queuePosition} people ahead of you`}
+          </span>
+        </div>
+      )}
+
+      {/* Spacer when no queue */}
+      {queuePosition === 0 && <div className="mb-3" />}
 
       {/* Trivia Quiz Section */}
       {currentQuestion && (

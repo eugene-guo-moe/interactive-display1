@@ -56,7 +56,7 @@ export default function RootLayout({
           </p>
         </div>
         <QuizProvider>
-          <main className="h-screen h-dvh flex flex-col overflow-hidden">
+          <main className="min-h-screen min-h-dvh flex flex-col overflow-x-hidden">
             {children}
           </main>
         </QuizProvider>
