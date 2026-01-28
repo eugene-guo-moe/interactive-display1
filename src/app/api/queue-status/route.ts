@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const runtime = 'edge'
+
 const WORKER_URL = process.env.WORKER_URL || 'https://interactive-display.eugene-ff3.workers.dev'
 
 export async function GET() {
