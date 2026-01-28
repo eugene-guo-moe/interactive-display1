@@ -414,10 +414,7 @@ async function generateWithFaceId(
     num_inference_steps: 20,
     guidance_scale: 4,
     id_weight: 1.0,
-    image_size: {
-      width: 576,
-      height: 1024,
-    },
+    image_size: 'square_hd',  // 1024x1024 - better fit for card's ~square image area
     enable_safety_checker: true,
   }
 
@@ -544,7 +541,7 @@ async function generateWithReplicate(
         num_steps: 20,
         guidance_scale: 4,
         id_weight: 1.0,
-        width: 576,
+        width: 1024,   // Square format - better fit for card's ~square image area
         height: 1024,
         output_format: 'png',        // Lossless quality (was webp at 80%)
         output_quality: 100,         // Max quality
