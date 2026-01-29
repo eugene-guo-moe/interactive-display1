@@ -4,7 +4,7 @@ import type { QuizAnswers, ProfileType } from '@/types/quiz'
 // IMPORTANT: Prompts focus on a SINGLE PERSON (the user) to ensure PuLID preserves their face
 const profileScenes: Record<ProfileType, string> = {
   // Pure profiles
-  guardian: 'medium close-up portrait of a single person standing confidently, wearing a warrior uniform with armour plating and no text, badges, or logos. The Merlion is visible in the background near Marina Bay, with the orderly civic skyline beyond. Clean public space, looking directly at the camera',
+  guardian: 'medium close-up portrait of a single person standing confidently, wearing a sleek futuristic bionic suit with glowing circuit-like lines and lightweight armour plating, no text, badges, or logos. The background is a futuristic Singapore cityscape with towering holographic displays, neon-lit skyscrapers, flying vehicles, and the Merlion reimagined as a glowing cybernetic monument near Marina Bay. Looking directly at the camera',
 
   steward: 'medium close-up portrait of a single person standing inside a Singapore Community Club. Behind the person, a clearly visible community club activity board displays posters for neighbourhood events, classes, and workshops. Multi-purpose rooms with tables and chairs are visible, and a blurred mix of residents of different ages and backgrounds are engaged in activities. The setting features clean public interiors typical of Singapore community clubs, with warm indoor lighting and an orderly, welcoming atmosphere. The person looks toward the camera with a composed, approachable expression',
 
@@ -20,7 +20,7 @@ const profileScenes: Record<ProfileType, string> = {
 
 // Style descriptions for each profile type
 const profileStyles: Record<ProfileType, string> = {
-  guardian: 'professional and reassuring atmosphere, structured composition, warm tropical daylight, clean civic surroundings around Marina Bay, modern Singapore public infrastructure, contemporary photography style',
+  guardian: 'futuristic and commanding atmosphere, cool blue and neon tones, cyberpunk-inspired Singapore skyline, sleek sci-fi composition, cinematic lighting with dramatic highlights, advanced technology aesthetic',
 
   steward: 'warm and welcoming atmosphere, soft golden hour tropical lighting, heartland community setting, everyday Singapore life, vibrant but gentle colours, documentary photography style',
 
