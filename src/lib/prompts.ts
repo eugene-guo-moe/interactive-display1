@@ -6,7 +6,7 @@ const profileScenes: Record<ProfileType, string> = {
   // Pure profiles
   guardian: 'medium close-up portrait of a single person standing confidently, wearing a sleek futuristic bionic suit with glowing circuit-like lines and lightweight armour plating, no text, badges, or logos. The background is a futuristic Singapore cityscape with towering holographic displays, neon-lit skyscrapers, numerous flying cars and aerial vehicles streaking across the sky at different altitudes, and the Merlion reimagined as a glowing cybernetic monument near Marina Bay. Looking directly at the camera',
 
-  steward: 'medium close-up portrait of a single person standing inside a Singapore Community Club. Behind the person, a clearly visible community club activity board displays posters for neighbourhood events, classes, and workshops. Multi-purpose rooms with tables and chairs are visible, and a blurred mix of residents of different ages and backgrounds are engaged in activities. The setting features clean public interiors typical of Singapore community clubs, with warm indoor lighting and an orderly, welcoming atmosphere. The person looks toward the camera with a composed, approachable expression',
+  steward: 'medium close-up portrait of a single person standing inside a futuristic Singapore community hub with transparent glass walls, floating holographic notice boards displaying community events, and sleek curved architecture. Behind the person, blurred residents of different ages interact with holographic interfaces and collaborative digital workstations. The space features lush vertical gardens integrated into high-tech walls, ambient LED strips in warm orange and soft purple tones, and panoramic windows showing a neon-lit Singapore heartland skyline at dusk. The person looks toward the camera with a composed, approachable expression',
 
   shaper: 'a single person holding a glowing holographic tablet, standing on an elevated waterfront promenade overlooking Marina Bay. Marina Bay Sands dominates the background, integrated into a smart city skyline with illuminated data overlays, digital interfaces, and connected infrastructure. Autonomous transport routes and smart urban systems are subtly visualised around the skyline. Cool blue and teal lighting, the person stands confidently and looks directly at the camera',
 
@@ -22,7 +22,7 @@ const profileScenes: Record<ProfileType, string> = {
 const profileStyles: Record<ProfileType, string> = {
   guardian: 'futuristic and commanding atmosphere, cool blue and neon tones, cyberpunk-inspired Singapore skyline, sleek sci-fi composition, cinematic lighting with dramatic highlights, advanced technology aesthetic',
 
-  steward: 'warm and welcoming atmosphere, soft golden hour tropical lighting, heartland community setting, everyday Singapore life, vibrant but gentle colours, documentary photography style',
+  steward: 'warm yet futuristic atmosphere, soft neon glow blended with warm amber and purple accent lighting, advanced community setting, vibrant saturated colours with cyan and magenta highlights, cinematic sci-fi photography style',
 
   shaper: 'dynamic and innovative atmosphere, cool blue and teal tones with subtle neon highlights, Marina Bay Sands-centred futuristic skyline, sleek modern composition, cinematic style grounded in realism',
 
