@@ -4,9 +4,9 @@ import type { QuizAnswers, ProfileType } from '@/types/quiz'
 // IMPORTANT: Prompts focus on a SINGLE PERSON (the user) to ensure PuLID preserves their face
 const profileScenes: Record<ProfileType, string> = {
   // Pure profiles
-  guardian: 'medium close-up portrait of a single person standing confidently, wearing a sleek futuristic bionic suit with glowing circuit-like lines and lightweight armour plating, no text, badges, or logos. The background is a futuristic Singapore cityscape with towering holographic displays, neon-lit skyscrapers, numerous flying cars and aerial vehicles streaking across the sky at different altitudes, and the Merlion reimagined as a glowing cybernetic monument near Marina Bay. Looking directly at the camera',
+  guardian: 'medium close-up portrait of a single person standing confidently, wearing a plain dark blue police uniform with no text, badges, or logos. A white and blue police patrol car is parked behind them. The Merlion is visible in the background near Marina Bay, with the orderly civic skyline beyond. Clean public space, looking directly at the camera',
 
-  steward: 'medium close-up portrait of a single person standing in a busy urban street at dusk, surrounded by a blurred crowd of people walking in different directions. A glowing digital network of interconnected nodes, data points, and luminous connection lines overlays the scene, radiating outward from the person. The network visualization features small glowing blue and pink dots connected by thin light trails, creating a digital identity mapping effect. Blurred city buildings and warm streetlights visible in the background. Shallow depth of field with the person in sharp focus. The person looks directly at the camera with a calm, confident expression',
+  steward: 'medium close-up portrait of a single person standing inside a Singapore Community Club. Behind the person, a clearly visible community club activity board displays posters for neighbourhood events, classes, and workshops. Multi-purpose rooms with tables and chairs are visible, and a blurred mix of residents of different ages and backgrounds are engaged in activities. The setting features clean public interiors typical of Singapore community clubs, with warm indoor lighting and an orderly, welcoming atmosphere. The person looks toward the camera with a composed, approachable expression',
 
   shaper: 'a single person holding a glowing holographic tablet, standing on an elevated waterfront promenade overlooking Marina Bay. Marina Bay Sands dominates the background, integrated into a smart city skyline with illuminated data overlays, digital interfaces, and connected infrastructure. Autonomous transport routes and smart urban systems are subtly visualised around the skyline. Cool blue and teal lighting, the person stands confidently and looks directly at the camera',
 
@@ -20,9 +20,9 @@ const profileScenes: Record<ProfileType, string> = {
 
 // Style descriptions for each profile type
 const profileStyles: Record<ProfileType, string> = {
-  guardian: 'futuristic and commanding atmosphere, cool blue and neon tones, cyberpunk-inspired Singapore skyline, sleek sci-fi composition, cinematic lighting with dramatic highlights, advanced technology aesthetic',
+  guardian: 'professional and reassuring atmosphere, structured composition, warm tropical daylight, clean civic surroundings around Marina Bay, modern Singapore public infrastructure, contemporary photography style',
 
-  steward: 'cinematic atmosphere, cool blue and warm amber dual-tone colour grading, bokeh background, evening twilight lighting, digital overlay aesthetic, surveillance-tech visual style, photorealistic with digital augmented reality elements, shallow depth of field, dramatic portrait composition',
+  steward: 'warm and welcoming atmosphere, soft golden hour tropical lighting, heartland community setting, everyday Singapore life, vibrant but gentle colours, documentary photography style',
 
   shaper: 'dynamic and innovative atmosphere, cool blue and teal tones with subtle neon highlights, Marina Bay Sands-centred futuristic skyline, sleek modern composition, cinematic style grounded in realism',
 
@@ -40,7 +40,7 @@ export function buildPrompt(profileType: ProfileType): string {
   const scene = profileScenes[profileType]
   const style = profileStyles[profileType]
 
-  return `A photorealistic medium close-up scene of ${scene}. Set in an authentic Singapore environment with curated iconic landmarks or public spaces that symbolically match the profile. Recognisable local architectural details, urban greenery, and everyday Singapore elements are clearly visible. ${style}. High quality, highly detailed, realistic lighting, 8k resolution. The person is well-groomed, professional appearance, neat and polished look, clean attire, naturally integrated into the environment, with no visible text, logos, or branded symbols. Non-touristy, contemporary Singapore realism.`
+  return `A photorealistic medium close-up scene of ${scene}. Set in an authentic Singapore environment with curated iconic landmarks or public spaces that symbolically match the profile. Recognisable local architectural details, urban greenery, and everyday Singapore elements are clearly visible. ${style}. High quality, highly detailed, realistic lighting, 8k resolution. The person is naturally integrated into the environment, with no visible text, logos, or branded symbols. Non-touristy, contemporary Singapore realism.`
 }
 
 /**

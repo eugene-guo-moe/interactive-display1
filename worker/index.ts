@@ -410,7 +410,7 @@ async function generateWithFaceId(
   const requestBody = {
     prompt: fullPrompt,
     reference_image_url: faceImageUrl,
-    negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive, casual clothing, t-shirt, hoodie, jeans, shorts, sandals, flip flops, messy hair, unkempt, wrinkled clothing, sloppy appearance, unprofessional',
+    negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
     num_inference_steps: 20,
     guidance_scale: 4,
     id_weight: 1.0,
@@ -537,7 +537,7 @@ async function generateWithReplicate(
       input: {
         prompt: fullPrompt,
         main_face_image: faceImageUrl,
-        negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive, casual clothing, t-shirt, hoodie, jeans, shorts, sandals, flip flops, messy hair, unkempt, wrinkled clothing, sloppy appearance, unprofessional',
+        negative_prompt: 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, disfigured, bare chest, shirtless, open vest, exposed skin, revealing clothing, low cut, cleavage, sleeveless, tank top, bikini, swimwear, underwear, lingerie, nudity, nsfw, inappropriate, suggestive',
         num_steps: 20,
         guidance_scale: 4,
         id_weight: 1.2,              // Increased from 1.0 for stronger face preservation
